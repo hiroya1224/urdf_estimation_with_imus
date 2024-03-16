@@ -1,0 +1,17 @@
+<launch>
+
+  <!-- <arg name="symbolic_model" default="$(find m5stack_imu)/symbolic_models/kinovo.symburdf" /> -->
+  <arg name="gui" default="false" />
+  <arg name="rvizconfig" default="$(find m5stack_imu)/rviz/urdf.rviz" />
+
+  <!-- <param name="symbolic_robot_description" command="$(find xacro)/xacro $(arg symbolic_model)" /> -->
+
+  <node if="$(arg gui)" name="joint_state_publisher" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui" />
+  
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher">
+    <param name="publish_frequency" type="double" value="$(arg pubrate)" />
+  </node>
+
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="true" />
+
+</launch>

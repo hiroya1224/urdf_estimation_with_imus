@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- macro for generating IMUs' frame -->
+  <xacro:macro name="krs6104_imumodule"
+                params="joint_name child_link">
+    <!-- set parent IMU frame: fixed to servo motor -->
+    <joint name="${joint_name}_parent_imu_fixedjoint" type="fixed">
+      <origin xyz="-0.07092 -0.01065 -0.00300" rpy="1.570796325 0 0" />
+      <parent link="${joint_name}__link__" />
+      <child link="${joint_name}_parent_imu" />
+    </joint>
+    <link name="${joint_name}_parent_imu">
+    </link>
+
+    <!-- set child IMU frame: fixed to servo horn -->
+    <joint name="${joint_name}_child_imu_fixedjoint" type="fixed">
+      <origin xyz="0.05191 -0.01065 -0.0030" rpy="1.570796325 3.141592654 0" />
+      <parent link="${child_link}" />
+      <child link="${joint_name}_child_imu" />
+    </joint>
+    <link name="${joint_name}_child_imu">
+    </link>
+
+  </xacro:macro>
+
+</robot>

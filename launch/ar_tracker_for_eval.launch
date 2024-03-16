@@ -1,0 +1,57 @@
+<launch>
+  <arg name="video" default="/dev/video2" />
+
+  <!-- <node pkg="tf" type="static_transform_publisher" name="map_to_camera" output="screen"
+    args="0 0 0 0.785398163 0 0 map outer_cam 10" /> -->
+
+  <node pkg="rosserial_python" type="serial_node.py" name="rosserial_node_ar" output="screen" args="tcp" />
+  <node pkg="m5stack_imu" type="get_joint_relpose_from_markers.py" name="joint_relpose_measure_marker" output="screen" />
+
+  <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
+    <param name="camera_frame_id" value="outer_cam" />
+    <param name="camera_name" value="outer_cam" />
+    <param name="camera_info_url" type="string" value="file://$(find m5stack_imu)/config/webcam_param.yaml" />
+          <param name="pixel_format" value="yuyv" />
+          <param name="framerate" value="30" />
+          <param name="autofocus" value="false" />
+    <param name="video_device" value="$(arg video)" />
+  </node>
+ 
+  <param name="approximate_sync" value="true" />
+
+  <group ns="usb_cam">
+    <node name="image_proc" pkg="image_proc" type="image_proc" output="screen">
+      <remap from="image_raw" to="/usb_cam/image_raw"/>
+      <remap from="camera_info" to="/usb_cam/camera_info"/>
+      <param name="approximate_sync" value="0.01" />
+    </node>
+  </group>
+
+  <!-- configure camera input -->
+  <arg name="queue_size" default="1" />
+
+  <group ns="apriltag">
+    <!-- apriltag_ros continuous detection node -->
+    <node pkg="apriltag_ros" type="apriltag_ros_continuous_node" name="apriltag_ros_continuous_node" clear_params="true" output="screen">
+      <!-- Remap topics from those used in code to those on the ROS network -->
+      <remap from="image_rect" to="/usb_cam/image_rect_color" />
+      <remap from="camera_info" to="/usb_cam/camera_info" />
+
+      <param name="publish_tag_detections_image" type="bool" value="true" />
+      <!-- default: false -->
+      <param name="queue_size" type="int" value="$(arg queue_size)" />
+
+      <!-- load parameters (incl. tag family, tags, etc.) -->
+      <rosparam command="load" file="$(find apriltag_ros)/config/settings.yaml"/>
+      <rosparam command="load" file="$(find m5stack_imu)/config/apriltags_tag.yaml"/>
+    </node>
+  </group>
+
+  <!-- rosrun image_view image_view image:=/camera/image -->
+  <node pkg="image_view" type="image_view" name="image_viewer" output="screen">
+    <remap from="image" to="/apriltag/tag_detections_image" />
+  </node>
+
+  <!-- <node pkg="rviz" type="rviz" name="rviz"/> -->
+ 
+</launch>

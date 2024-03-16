@@ -1,0 +1,6 @@
+<launch>
+
+  <node name="robot_description_setter" pkg="m5stack_imu" type="robot_description_setter.py" />
+  <node name="relpose_estimator_registrator" pkg="m5stack_imu" type="relpose_estimator_registrator.py" />
+
+</launch>

@@ -1,0 +1,26 @@
+image_width: 640
+image_height: 480
+camera_name: outer_cam
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [768.09176,   0.     , 341.94131,
+           0.     , 769.86718, 298.76601,
+           0.     ,   0.     ,   1.     ]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [-0.163432, 0.188012, 0.003270, -0.004245, 0.000000]
+rectification_matrix:
+  rows: 3
+  cols: 3
+  data: [1., 0., 0.,
+         0., 1., 0.,
+         0., 0., 1.]
+projection_matrix:
+  rows: 3
+  cols: 4
+  data: [749.34589,   0.     , 340.3669 ,   0.     ,
+           0.     , 754.50659, 300.28906,   0.     ,
+           0.     ,   0.     ,   1.     ,   0.     ]

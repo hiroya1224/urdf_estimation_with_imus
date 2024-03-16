@@ -1,0 +1,7 @@
+standalone_tags:
+  [
+     {id: 0, size: 0.015, name: joint1_marker},
+     {id: 1, size: 0.015, name: joint2_marker},
+     {id: 2, size: 0.015, name: joint3_marker},
+     {id: 8, size: 0.032, name: bipass_marker},
+  ]

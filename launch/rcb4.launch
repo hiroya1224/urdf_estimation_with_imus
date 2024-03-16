@@ -1,0 +1,47 @@
+<launch>
+
+  <arg name="urdf_path" default="/tmp/robot_realized.urdf" />
+  <arg name="servo_config_path" default="$(find m5stack_imu)/config/kinovo_servo_config.yaml" />
+  <arg name="namespace" default="kxr" />
+  <arg name="publish_imu" default="true" />
+  <arg name="imu_frame_id" default="base_link" />
+  <arg name="control_loop_rate" default="20" />
+  <arg name="use_rcb4" default="false" doc="Flag to use RCB4 mini board"/>
+
+  <group if="$(eval len(arg('namespace')) > 0)" ns="$(arg namespace)" >
+    <param name="control_loop_rate" value="$(arg control_loop_rate)" />
+    <node name="rcb4_ros_bridge"
+          pkg="kxr_controller" type="rcb4_ros_bridge.py"
+          clear_params="true"
+          output="screen"
+          required="true" >
+      <rosparam subst_value="true" >
+        urdf_path: $(arg urdf_path)
+        servo_config_path: $(arg servo_config_path)
+        publish_imu: $(arg publish_imu)
+        imu_frame_id: $(arg namespace)/$(arg imu_frame_id)
+        use_rcb4: $(arg use_rcb4)
+      </rosparam>
+    </node>
+
+  </group>
+
+  <group unless="$(eval len(arg('namespace')) > 0)">
+    <param name="control_loop_rate" value="$(arg control_loop_rate)" />
+    <node name="rcb4_ros_bridge"
+          pkg="kxr_controller" type="rcb4_ros_bridge.py"
+          clear_params="true"
+          output="screen"
+          required="true" >
+      <rosparam subst_value="true" >
+        urdf_path: $(arg urdf_path)
+        servo_config_path: $(arg servo_config_path)
+        publish_imu: $(arg publish_imu)
+        imu_frame_id: $(arg imu_frame_id)
+        use_rcb4: $(arg use_rcb4)
+      </rosparam>
+    </node>
+
+  </group>
+
+</launch>

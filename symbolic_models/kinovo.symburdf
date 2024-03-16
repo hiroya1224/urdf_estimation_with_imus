@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!-- ================= SYMBOLIC URDF ================= -->
+<!-- indefinite variables are written in #|this_form|# -->
+
+<robot name="kinovo"
+       xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- import macros -->
+  <xacro:include filename="$(find m5stack_imu)/imu_module/krs6104_imu.xacro" />
+  <xacro:include filename="$(find m5stack_imu)/imu_module/krs3304_imu.xacro" />
+
+  <!-- macro for generator for IMUs' reference frames -->
+  <xacro:macro name="joint_with_imu_link"
+               params="joint_name parent_link child_link xyz rpy">
+
+    <!-- dummy joint for parent position to avoid rotating with child link -->
+    <joint name="${parent_link}_to_${joint_name}_connector" type="fixed">
+      <origin xyz="${xyz}" rpy="${rpy}" />
+      <parent link="${parent_link}" />
+      <child link="${joint_name}__link__" />
+    </joint>
+
+    <!-- dummy link for parent IMU -->
+    <link name="${joint_name}__link__">
+    </link>
+
+    <!-- original revolute joint -->
+    <joint name="${joint_name}" type="revolute">
+      <origin xyz="0 0 0" rpy="0 0 0" /> <!-- must be 0 0 0 / 0 0 0 -->
+      <parent link="${joint_name}__link__" />
+      <child link="${child_link}" />
+      <axis xyz="0 0 1" />
+      <limit lower="-3.14" upper="3.14" effort="100" velocity="1.57" />
+    </joint>
+
+  </xacro:macro>
+
+  <!-- macro for generator for IMUs' reference frames -->
+  <xacro:macro name="joint_with_imu_link_symbolic"
+               params="joint_name parent_link child_link">
+    <xacro:joint_with_imu_link
+            joint_name="${joint_name}"
+            parent_link="${parent_link}" child_link="${child_link}"
+            xyz="#|${joint_name}_xyz|#" rpy="#|${joint_name}_rpy|#" />
+  </xacro:macro>
+
+  <!-- main part -->
+  <link name="world">
+  </link>
+
+  <joint name="world_fixed_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="world" />
+    <child link="base_link" />
+  </joint>
+
+  <!-- links -->
+  <link name="base_link">
+  </link>
+  <link name="link0">
+  </link>
+  <link name="link1">
+  </link>
+  <link name="link2">
+  </link>
+  <link name="link3">
+  </link>
+
+  <!-- joints -->
+  <xacro:joint_with_imu_link
+            joint_name="joint0"
+            parent_link="base_link" child_link="link0"
+            xyz="0 0 0.045" rpy="3.14159265 0 0" />
+
+  <xacro:joint_with_imu_link
+            joint_name="joint1"
+            parent_link="link0" child_link="link1"
+            xyz="0.0175 0.0 -0.0225" rpy="1.570796325 0.0 0.0" />
+
+  <xacro:joint_with_imu_link_symbolic
+            joint_name="joint2"
+            parent_link="link1" child_link="link2" />
+            
+  <xacro:joint_with_imu_link_symbolic
+            joint_name="joint3"
+            parent_link="link2" child_link="link3" />
+
+  <!-- <xacro:joint_with_imu_link
+            joint_name="joint3"
+            parent_link="link2" child_link="link3"
+            xyz="0.1 0.0 0.0225" rpy="3.14159265 0.0 0.0" /> -->
+
+  <!-- for gripper -->
+  <link name="gripper_base_link">
+  </link>
+
+  <link name="gripper_parallel_dummylink">
+  </link>
+
+  <link name="grasp_point">
+  </link>
+
+  <xacro:joint_with_imu_link
+            joint_name="gripper_yaw_joint"
+            parent_link="link3" child_link="gripper_base_link"
+            xyz="0.0850 0.0008 0.0" rpy="1.570796325 0.0 0.0" />
+
+  <xacro:joint_with_imu_link
+            joint_name="gripper_parallel_joint"
+            parent_link="gripper_base_link" child_link="gripper_parallel_dummylink"
+            xyz="0.0 0.0 0.0400" rpy="0.0 0.0 0.0" />
+
+  <joint name="gripper_endeffector_fixedjoint" type="fixed">
+    <!-- <origin xyz="0.0 0.0 0.0700" rpy="0 -1.570796325 1.570796325" /> -->
+    <origin xyz="0.0 0.0 0.0700" rpy="3.14159265 0 0" />
+    <parent link="gripper_base_link" />
+    <child link="grasp_point" />
+  </joint>
+
+  <xacro:krs6104_imumodule joint_name="joint1" child_link="link1" />
+  <xacro:krs6104_imumodule joint_name="joint2" child_link="link2" />
+  <xacro:krs3304_imumodule joint_name="joint3" child_link="link3" />
+
+</robot>

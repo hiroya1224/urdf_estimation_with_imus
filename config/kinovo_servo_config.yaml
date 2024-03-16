@@ -1,0 +1,8 @@
+joint_name_to_servo_id: {
+  joint0: 1,
+  joint1: 3,
+  joint2: 5,
+  joint3: 6,
+  gripper_yaw_joint: 8,
+  gripper_parallel_joint: 10
+}
