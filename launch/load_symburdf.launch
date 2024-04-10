@@ -1,7 +1,7 @@
 <launch>
 
-  <arg name="symbolic_model" default="$(find m5stack_imu)/symbolic_models/kinovo.symburdf" />
+  <arg name="symbolic_model" default="$(find urdf_estimation_with_imus)/symbolic_models/kinovo.symburdf" />
   <param name="symbolic_robot_description" command="$(find xacro)/xacro $(arg symbolic_model)" />
-  <!-- <node name="robot_description_setter" pkg="m5stack_imu" type="robot_description_setter.py" /> -->
+  <!-- <node name="robot_description_setter" pkg="urdf_estimation_with_imus" type="robot_description_setter.py" /> -->
 
 </launch>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
 
-  <arg name="model" default="$(find m5stack_imu)/models/sample_imus_simple.urdf"/>
+  <arg name="model" default="$(find urdf_estimation_with_imus)/models/sample_imus_simple.urdf"/>
 
   <arg name="world" default="empty"/> 
   <arg name="paused" default="false"/>

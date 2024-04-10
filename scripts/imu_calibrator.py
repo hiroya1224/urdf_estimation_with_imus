@@ -3,7 +3,7 @@ import rospy
 import roslib.packages
 import numpy as np
 import yaml
-from m5stack_imu.msg import ImuDataFiltered, ImuDataFilteredList
+from urdf_estimation_with_imus.msg import ImuDataFiltered, ImuDataFilteredList
 from imu_relpose_estim.preprocess.sensor_calibrator import CalibrationContainer, ImuCalibrator
 
 
@@ -215,7 +215,7 @@ if __name__ == '__main__':
     rospy.init_node('imu_calibrator', anonymous=False)
 
     calib = ImuCalibratorROS(acc_size=10000, omg_size=1000,
-                             calib_param_yaml="{}/config/imu_calibparams.yaml".format(roslib.packages.get_pkg_dir("m5stack_imu")),
+                             calib_param_yaml="{}/config/imu_calibparams.yaml".format(roslib.packages.get_pkg_dir("urdf_estimation_with_imus")),
                              force_recalib=args.recalib)
     imu_sub = rospy.Subscriber("/imu_filtered/raw", ImuDataFilteredList, calib.callback)
 

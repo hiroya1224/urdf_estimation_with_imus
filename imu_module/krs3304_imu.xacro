@@ -7,8 +7,8 @@
                 params="joint_name child_link">
     <!-- set parent IMU frame: fixed to servo motor -->
     <joint name="${joint_name}_parent_imu_fixedjoint" type="fixed">
-      <!-- cheated xyz -->
-      <origin xyz="-0.0600 0.01250 0.00000" rpy="-1.570796325 0 0" />
+      <!-- remeasured from CAD model -->
+      <origin xyz="-0.0610 0.01200 0.00000" rpy="-1.570796325 0 0" />
       <parent link="${joint_name}__link__" />
       <child link="${joint_name}_parent_imu" />
     </joint>

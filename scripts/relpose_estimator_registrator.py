@@ -38,7 +38,7 @@ for imu in sorted_imu_names:
 print(pairs_of_imus)
 
 launch = roslaunch.scriptapi.ROSLaunch()
-nodes = [roslaunch.core.Node("m5stack_imu", "extleastsq_estim_imu_relpose.py", args='--this {} --child {}'.format(*imu_pair)) for imu_pair in pairs_of_imus] 
+nodes = [roslaunch.core.Node("urdf_estimation_with_imus", "extleastsq_estim_imu_relpose.py", args='--this {} --child {}'.format(*imu_pair)) for imu_pair in pairs_of_imus] 
 
 launch.start()
 for node in nodes:

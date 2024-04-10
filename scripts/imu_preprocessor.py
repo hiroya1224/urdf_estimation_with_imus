@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import rospy
 import numpy as np
-from m5stack_imu.msg import ImuDataFiltered, ImuDataFilteredList
+from urdf_estimation_with_imus.msg import ImuDataFiltered, ImuDataFilteredList
 from sensor_msgs.msg import Imu
 import xml.etree.ElementTree as ET
 

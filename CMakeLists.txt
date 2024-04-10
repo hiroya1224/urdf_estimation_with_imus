@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(m5stack_imu)
+project(urdf_estimation_with_imus)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -122,7 +122,7 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES m5stack_imu
+#  LIBRARIES urdf_estimation_with_imus
 #  CATKIN_DEPENDS other_catkin_pkg
 #  DEPENDS system_lib
 )
@@ -140,7 +140,7 @@ include_directories(
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/m5stack_imu.cpp
+#   src/${PROJECT_NAME}/urdf_estimation_with_imus.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -151,7 +151,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/m5stack_imu_node.cpp)
+# add_executable(${PROJECT_NAME}_node src/urdf_estimation_with_imus_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -215,7 +215,7 @@ include_directories(
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_m5stack_imu.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_urdf_estimation_with_imus.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

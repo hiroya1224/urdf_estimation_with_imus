@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import rospy
 import numpy as np
-from m5stack_imu.msg import ImuDataFilteredList, PoseWithCovAndBingham
+from urdf_estimation_with_imus.msg import ImuDataFilteredList, PoseWithCovAndBingham
 from std_msgs.msg import Empty, Float64
 from imu_relpose_estim.preprocess.urdf_parser import UrdfLinkTree
 

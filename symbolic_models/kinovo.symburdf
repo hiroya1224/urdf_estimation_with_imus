@@ -7,8 +7,8 @@
        xmlns:xacro="http://www.ros.org/wiki/xacro">
 
   <!-- import macros -->
-  <xacro:include filename="$(find m5stack_imu)/imu_module/krs6104_imu.xacro" />
-  <xacro:include filename="$(find m5stack_imu)/imu_module/krs3304_imu.xacro" />
+  <xacro:include filename="$(find urdf_estimation_with_imus)/imu_module/krs6104_imu.xacro" />
+  <xacro:include filename="$(find urdf_estimation_with_imus)/imu_module/krs3304_imu.xacro" />
 
   <!-- macro for generator for IMUs' reference frames -->
   <xacro:macro name="joint_with_imu_link"

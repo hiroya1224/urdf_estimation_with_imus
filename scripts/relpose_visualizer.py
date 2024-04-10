@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import axes3d, Axes3D
 from matplotlib import gridspec
 
-from m5stack_imu.msg import PoseWithCovAndBingham
+from urdf_estimation_with_imus.msg import PoseWithCovAndBingham
 
 import bingham.visualize.SO3s as vSO3
 from bingham.distribution import BinghamDistribution

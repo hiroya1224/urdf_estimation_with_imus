@@ -2,7 +2,7 @@
 
 import numpy as np
 import rospy
-from m5stack_imu.msg import PoseWithCovAndBingham
+from urdf_estimation_with_imus.msg import PoseWithCovAndBingham
 from imu_relpose_estim.preprocess.urdf_parser import UrdfLinkTree
 from imu_relpose_estim.utils.rotation_helper import RotationHelper
 from std_msgs.msg import Empty
