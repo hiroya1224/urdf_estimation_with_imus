@@ -1,6 +1,10 @@
 <launch>
     <arg name="baud" default="921600"/>
+    <arg name="noserial" default="false"/>
     <param name="symbolic_robot_description" command="$(find xacro)/xacro $(find urdf_estimation_with_imus)/symbolic_models/twoimus.symburdf" />
-    <node pkg="rosserial_python" type="serial_node.py" name="serial0" args="/dev/ttyUSB0 _baud:=$(arg baud)" output="screen" />
-    <node pkg="rosserial_python" type="serial_node.py" name="serial1" args="/dev/ttyUSB1 _baud:=$(arg baud)" output="screen" />
+
+    <group unless="$(arg noserial)">
+        <node pkg="rosserial_python" type="serial_node.py" name="serial0" args="/dev/ttyUSB0 _baud:=$(arg baud)" output="screen" />
+        <node pkg="rosserial_python" type="serial_node.py" name="serial1" args="/dev/ttyUSB1 _baud:=$(arg baud)" output="screen" />
+    </group>
 </launch>
