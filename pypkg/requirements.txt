@@ -1,0 +1,7 @@
+numpy>=1.19.5
+scipy
+numpy-quaternion
+matplotlib
+opencv-python
+git+https://github.com/hiroya1224/BinghamNLL.git@dev-v1.0
+pybind11
