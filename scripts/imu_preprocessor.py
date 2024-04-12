@@ -108,9 +108,11 @@ if __name__ == '__main__':
     parser.add_argument("--publish_calib", action="store_true", help="when true it directly publish /imu_filtered/calib")
     parser.add_argument("--cov", type=float, default=1.0, help="noise covariance will set to cov * eye(3)")
     parser.add_argument("--subs_imus", type=str, nargs="*", default=None, help="noise covariance will set to cov * eye(3)")
+    parser.add_argument("__name", default="imu_preprocessor", nargs="?", help="for roslaunch")
+    parser.add_argument("__log", default="", nargs="?", help="for roslaunch")
     args = parser.parse_args()
 
-    rospy.init_node('imu_preprocessor', anonymous=False)
+    rospy.init_node(args.__name, anonymous=False)
 
     symbolic_robot_description = rospy.get_param("/symbolic_robot_description")
     preproc = ImuPreprocessorROS(symbolic_robot_description, args.publish_calib, args.subs_imus, args.cov)

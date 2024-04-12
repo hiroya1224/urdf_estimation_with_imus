@@ -151,6 +151,8 @@ class ImuCalibratorROS:
 
         if self.calibration_step:
             calib_flags = 0
+            if len(msg.data) == 0:
+                calib_flags = -1
             for data in msg.data:
                 calib_flags += self.imu_calibration(data)
             
@@ -210,9 +212,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--recalib', action="store_true")
+    parser.add_argument("__name", default="imu_calibrator", nargs="?", help="for roslaunch")
+    parser.add_argument("__log", default="", nargs="?", help="for roslaunch")
     args = parser.parse_args()
 
-    rospy.init_node('imu_calibrator', anonymous=False)
+    rospy.init_node(args.__name, anonymous=False)
 
     calib = ImuCalibratorROS(acc_size=10000, omg_size=1000,
                              calib_param_yaml="{}/config/imu_calibparams.yaml".format(roslib.packages.get_pkg_dir("urdf_estimation_with_imus")),

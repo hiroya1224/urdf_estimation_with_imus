@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="urdf_estimation_with_imus" type="imu_calibrator.py" name="imu_calibrator" output="screen" />
+    <node pkg="urdf_estimation_with_imus" type="imu_preprocessor.py" name="imu_preprocessor" output="screen" />
+</launch>
