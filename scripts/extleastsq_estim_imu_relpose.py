@@ -150,15 +150,16 @@ class EstimateImuRelativePoseExtendedLeastSquareROS:
     
     def publish_states(self, header):
         msg = PoseWithCovAndBingham()
+        position = self.state_t.relative_position.position
+        rot_wxyz = self.state_t.bingham_param.mode_quat
 
         msg.header = header
         msg.header.frame_id = self.relative_imu_id
 
-        msg.pose.position.x = self.state_t.relative_position.position[0]
-        msg.pose.position.y = self.state_t.relative_position.position[1]
-        msg.pose.position.z = self.state_t.relative_position.position[2]
+        msg.pose.position.x = position[0]
+        msg.pose.position.y = position[1]
+        msg.pose.position.z = position[2]
 
-        rot_wxyz = self.state_t.bingham_param.mode_quat
         msg.pose.orientation.w = rot_wxyz[0]
         msg.pose.orientation.x = rot_wxyz[1]
         msg.pose.orientation.y = rot_wxyz[2]
@@ -168,6 +169,9 @@ class EstimateImuRelativePoseExtendedLeastSquareROS:
         msg.rotation_bingham_parameter = self.state_t.bingham_param.Amat.flatten()
 
         self.pose_publisher.publish(msg)
+
+        rospy.logwarn("position      : {}".format(position))
+        rospy.logwarn("rotation(wxyz): {}".format(rot_wxyz))
 
 
     def reset_estimation_callback(self, msg):
@@ -190,7 +194,7 @@ if __name__ == '__main__':
     symbolic_robot_description = rospy.get_param("/symbolic_robot_description")
 
     pf = EstimateImuRelativePoseExtendedLeastSquareROS(args.this, args.child, symbolic_robot_description,
-                                                       use_child_gyro=args.only_this_gyro)
+                                                       use_child_gyro=False)
     imu_sub = rospy.Subscriber("/imu_filtered/calib", ImuDataFilteredList, pf.ros_callback, queue_size=1)
     reset_estimation = rospy.Subscriber("/reset_estimation", Empty, pf.reset_estimation_callback, queue_size=1)
     

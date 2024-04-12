@@ -45,7 +45,15 @@ class ImuPreprocessorROS:
         for frame_id, container in self.container.items():
 
             t_list = container._t.list
-            gyroacc_at_baset0, dgyrodacc_at_baset0 = ImuPreprocessor.time_interpolation(base_t0, t_list[container.mid_idx], container.coeffs, t_list)
+            if container.coeffs is None:
+                return None
+            
+            time_interpolated = ImuPreprocessor.time_interpolation(base_t0, t_list[container.mid_idx], container.coeffs, t_list)
+
+            if time_interpolated is None:
+                return None
+
+            gyroacc_at_baset0, dgyrodacc_at_baset0 = time_interpolated
 
             if np.all(np.isclose(gyroacc_at_baset0, 0.0)) or np.all(np.isclose(dgyrodacc_at_baset0, 0.0)):
                 continue
@@ -99,7 +107,11 @@ class ImuPreprocessorROS:
 
         if frame_id == base_frame_id:
             pub_msg = self.create_interpolated_msg(base_frame_id)
-            self.publisher.publish(pub_msg)
+            if pub_msg is not None:
+                self.publisher.publish(pub_msg)
+            else:
+                # rospy.logerr("pub_msg is None")
+                pass
 
 
 if __name__ == '__main__':

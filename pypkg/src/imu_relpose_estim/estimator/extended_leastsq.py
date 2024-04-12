@@ -4,7 +4,6 @@ from ..utils.noisecov_helper import NoiseCovarianceHelper
 from ..utils.rotation_helper import RotationHelper
 from ..utils.dataclasses import ObservationData, StateDataGeneral, BinghamParameterGeneral, NormalDistributionData
 from ..utils.sequential_leastsq import SequentialLeastSquare
-from ..utils.nextxcov_helper import NextStateCovarianceHelper
 
 
 ## NOTE: you should check the comments with "CHECK" notes.
@@ -338,8 +337,12 @@ class EstimateImuRelativePoseExtendedLeastSquare:
         self.rotation_Amat = np.eye(4) * 1e-9
 
         ## sequential leastsq
-        self.jointpos_estim = SequentialLeastSquare(6, 3, "joint")
-        self.direct_relpos_estim = SequentialLeastSquare(6, 6, "relposition")
+        if use_child_gyro:
+            self.jointpos_estim = SequentialLeastSquare(6, 6, "joint")
+            self.direct_relpos_estim = SequentialLeastSquare(6, 6, "relposition")
+        else:
+            self.jointpos_estim = SequentialLeastSquare(3, 3, "joint")
+            self.direct_relpos_estim = SequentialLeastSquare(3, 3, "relposition")
         
         self.force_bingham = BinghamHolderForce()
         self.gyro_bingham = BinghamHolderGyro()
@@ -382,7 +385,7 @@ class EstimateImuRelativePoseExtendedLeastSquare:
                         this_state: StateDataExtLeastSquare,
                         this_obsdata: ObservationData,
                         child_obsdata: ObservationData,
-                        use_child_gyro=True):
+                        use_child_gyro=False):
         ## alias
         E_R = NoiseCovarianceHelper.calc_E_R(this_state.bingham_param.Eq4th)
         f_i = this_obsdata.E_force
@@ -391,13 +394,13 @@ class EstimateImuRelativePoseExtendedLeastSquare:
         
         dwcm_i = NoiseCovarianceHelper.calc_E_vCM(this_obsdata.E_dgyro)
         wcmsq_i = NoiseCovarianceHelper.calc_E_vCMsq(this_obsdata.E_gyro, this_obsdata.Cov_gyro)
+        dwcm_j = NoiseCovarianceHelper.calc_E_vCM(child_obsdata.E_dgyro)
+        wcmsq_j = NoiseCovarianceHelper.calc_E_vCMsq(child_obsdata.E_gyro, child_obsdata.Cov_gyro)
         Omega_i = wcmsq_i + dwcm_i
+        Omega_j = wcmsq_j + dwcm_j
 
         ## additional
         if use_child_gyro:
-            dwcm_j = NoiseCovarianceHelper.calc_E_vCM(child_obsdata.E_dgyro)
-            wcmsq_j = NoiseCovarianceHelper.calc_E_vCMsq(child_obsdata.E_gyro, child_obsdata.Cov_gyro)
-            Omega_j = wcmsq_j + dwcm_j
 
             ## fuse
             # s = 0.5
@@ -412,7 +415,8 @@ class EstimateImuRelativePoseExtendedLeastSquare:
             extDeltaFi[:3] = DeltaFi
             extDeltaFi[3:] = DeltaFi
         else:
-            Omega = Omega_i
+            extOmega = 0.5 * (Omega_i + E_R @ Omega_j @ E_R.T)
+            extDeltaFi = DeltaFi
             
         # wcm_i = NoiseCovarianceHelper.calc_E_vCM(this_obsdata.E_gyro)
         # wcmsq_i = wcm_i @ wcm_i
@@ -429,7 +433,7 @@ class EstimateImuRelativePoseExtendedLeastSquare:
                         this_obsdata: ObservationData,
                         child_obsdata: ObservationData,
                         forgetting_factor_position,
-                        use_child_gyro=True):
+                        use_child_gyro=False):
 
         if this_state.is_jointposition_registered():
             ## alias

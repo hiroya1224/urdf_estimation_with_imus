@@ -17,7 +17,7 @@ class SequentialLeastSquare:
         ## initialize `param` and `param_cov`
         self.initialize()
 
-        self.diffs = [np.zeros(6)] * 100
+        self.diffs = [np.zeros(data_dim)] * 100
         # self.N = 0
         # self.cov_scaler = 1
 
@@ -42,21 +42,24 @@ class SequentialLeastSquare:
 
 
     def get_estimates(self):
+        if self.data_dim == 6:
+            _E_r = self.param.position
+            _cov_r = self.param.covariance
 
-        _E_r = self.param.position
-        _cov_r = self.param.covariance
+            _E_r_i = _E_r[:3]
+            _cov_r_i = _cov_r[:3, :3]
+            _E_r_j = _E_r[3:]
+            _cov_r_j = _cov_r[3:, 3:]
 
-        _E_r_i = _E_r[:3]
-        _cov_r_i = _cov_r[:3, :3]
-        _E_r_j = _E_r[3:]
-        _cov_r_j = _cov_r[3:, 3:]
+            sum_inv = np.linalg.inv(_cov_r_i + _cov_r_j)
+            cov_r = _cov_r_i @ sum_inv @ _cov_r_j
+            E_r = _cov_r_j @ sum_inv @ _E_r_i + _cov_r_i @ sum_inv @ _E_r_j
 
-        sum_inv = np.linalg.inv(_cov_r_i + _cov_r_j)
-        cov_r = _cov_r_i @ sum_inv @ _cov_r_j
-        E_r = _cov_r_j @ sum_inv @ _E_r_i + _cov_r_i @ sum_inv @ _E_r_j
-
-        covariance = cov_r
-        position = E_r
+            covariance = cov_r
+            position = E_r
+        else:
+            position = self.param.position
+            covariance = self.param.covariance
 
         param = NormalDistributionData(position=position,
                                             covariance=covariance,
@@ -72,22 +75,24 @@ class SequentialLeastSquare:
         
         if type(forgetting_factor) is float:
             gamma = forgetting_factor
-        else:
-            ## dynamically calculate based on likelihood
-            # print("np.linalg.det(P)", np.linalg.det(P))
-            # gamma_param = np.exp(-0.5 * np.trace(np.linalg.pinv(XTX @ P @ XTX) @ np.outer(XTy - np.dot(XTX, theta), XTy - np.dot(XTX, theta))))
-            # gamma_param = np.min([np.exp(-0.5 * np.linalg.norm(y - np.dot(X, theta))**2), 0.9]) / 0.9
-            gamma_param = 0.9
-            # print("y - np.dot(X, theta)", y - np.dot(X, theta))
-            # print("X @ P @ X.T", X @ P @ X.T)
-            # print("(y-Xt).T P (y-Xt)", np.trace(np.linalg.pinv(X @ P @ X.T) @ np.outer(y - np.dot(X, theta), y - np.dot(X, theta))))
-            # gamma_param = np.exp(-0.5 * np.trace(np.linalg.pinv(X @ P @ X.T) @ np.outer(y - np.dot(X, theta), y - np.dot(X, theta))))
-            print("gamma_param", gamma_param)
-            gamma = 0.90 + 0.10*gamma_param
-            # if forgetting_factor is None:
-            #     print("gamma_param", gamma_param)
+        # else:
+        #     ## dynamically calculate based on likelihood
+        #     # print("np.linalg.det(P)", np.linalg.det(P))
+        #     # gamma_param = np.exp(-0.5 * np.trace(np.linalg.pinv(XTX @ P @ XTX) @ np.outer(XTy - np.dot(XTX, theta), XTy - np.dot(XTX, theta))))
+        #     # gamma_param = np.min([np.exp(-0.5 * np.linalg.norm(y - np.dot(X, theta))**2), 0.9]) / 0.9
+        #     gamma_param = 0.9
+        #     # print("y - np.dot(X, theta)", y - np.dot(X, theta))
+        #     # print("X @ P @ X.T", X @ P @ X.T)
+        #     # print("(y-Xt).T P (y-Xt)", np.trace(np.linalg.pinv(X @ P @ X.T) @ np.outer(y - np.dot(X, theta), y - np.dot(X, theta))))
+        #     # gamma_param = np.exp(-0.5 * np.trace(np.linalg.pinv(X @ P @ X.T) @ np.outer(y - np.dot(X, theta), y - np.dot(X, theta))))
+        #     print("gamma_param", gamma_param)
+        #     gamma = 0.90 + 0.10*gamma_param
+        #     # if forgetting_factor is None:
+        #     #     print("gamma_param", gamma_param)
+            
+        # print(ext_coeff_matrix)
         
-        gamma = 1.0
+        # gamma = 1.0
         self.param.position, self.param.covariance = self.update_ordinal(ext_coeff_matrix, obsv_data, gamma, diff_cov)
         # print("sqrt trace(self.param.covariance)", np.sqrt(np.trace(self.param.covariance)))
 
@@ -103,7 +108,7 @@ class SequentialLeastSquare:
         X = ext_coeff_matrix
         y = _y
        
-        print("X.shape", X.shape)
+        # print("X.shape", X.shape)
         theta = self.param.position
         P = self.param.covariance
         I = np.eye(self.data_dim)
@@ -220,7 +225,7 @@ class SequentialLeastSquare:
         covariance = _covariance
         position = _position
 
-        print("sqrt trace(covariance)", np.sqrt(np.trace(covariance)))
+        # print("sqrt trace(covariance)", np.sqrt(np.trace(covariance)))
 
         return position, covariance
     
