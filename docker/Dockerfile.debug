@@ -1,0 +1,38 @@
+FROM osrf/ros:noetic-desktop-full
+ARG DOCKER_UID=1000
+ARG DOCKER_USER=docker
+ARG DOCKER_PASSWORD=docker
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt update && apt install -y \
+    git \
+    python3-pip \
+    tmux \
+    vim
+# for opencv (optional)
+RUN apt update && apt install -y \
+    libgl1-mesa-dev \
+    libglib2.0-0
+# for ros
+RUN apt update && apt install -y \
+    ros-noetic-catkin \
+    python3-catkin-tools \
+    python3-osrf-pycommon
+
+# make user
+RUN useradd -m \
+  --uid ${DOCKER_UID} --groups sudo ${DOCKER_USER} \
+  && echo ${DOCKER_USER}:${DOCKER_PASSWORD} | chpasswd
+RUN chown -R ${DOCKER_USER} ${HOME}
+USER ${DOCKER_USER}
+
+# make ros workspace
+RUN echo "source /opt/ros/noetic/setup.bash" >> ${HOME}/.bashrc
+RUN mkdir -p ${HOME}/catkin_ws/src
+RUN cd ${HOME}/catkin_ws && /bin/bash -c "source /opt/ros/noetic/setup.sh; catkin build"
+RUN echo "source ${HOME}/catkin_ws/devel/setup.bash" >> ${HOME}/.bashrc
+
+# python packages install
+COPY pypkg/requirements.txt requirements.txt
+RUN pip3 install -r requirements.txt

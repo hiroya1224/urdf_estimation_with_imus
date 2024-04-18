@@ -1,0 +1,49 @@
+version: '2.3'
+services:
+
+  debug:
+    ## mount the host package and build it in a container
+    ## this is useful for debugging on the host
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.debug
+
+    container_name: urdfestim_debug
+    tty: true
+
+    working_dir: "/home/docker/catkin_ws/src/urdf_estimation_with_imus"
+    shm_size: '16gb'
+
+    environment:
+      - DISPLAY=${DISPLAY}
+      - SHELL=/bin/bash
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ..:/home/docker/catkin_ws/src/urdf_estimation_with_imus
+
+    ## build on the container
+    entrypoint: >
+      bash -c "
+        catkin build urdf_estimation_with_imus
+        pip3 install ./pypkg
+        source ~/.bashrc
+        /bin/bash
+      "
+
+  test:
+    ## clone the package directly from github and build it in the container
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.test
+    
+    container_name: urdfestim_test
+    tty: true
+
+    working_dir: "/home/docker/catkin_ws/src/urdf_estimation_with_imus"
+    shm_size: '16gb'
+
+    environment:
+      - DISPLAY=${DISPLAY}
+      - SHELL=/bin/bash
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
