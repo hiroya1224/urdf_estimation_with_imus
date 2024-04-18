@@ -1,7 +1,7 @@
 numpy>=1.19.5
 scipy
 numpy-quaternion
-matplotlib
+matplotlib>=3.7.1
 opencv-python
 git+https://github.com/hiroya1224/BinghamNLL.git@dev-v1.0
 pybind11
