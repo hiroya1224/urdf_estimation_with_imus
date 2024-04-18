@@ -30,7 +30,7 @@ USER ${DOCKER_USER}
 # clone git repository
 RUN mkdir -p ${HOME}/catkin_ws/src/ && \
     cd ${HOME}/catkin_ws/src/ && \
-    git clone -b v1.0.0 https://github.com/hiroya1224/urdf_estimation_with_imus.git
+    git clone -b v1.0.0-paperedition https://github.com/hiroya1224/urdf_estimation_with_imus.git
 
 # make ros workspace
 RUN echo "source /opt/ros/noetic/setup.bash" >> ${HOME}/.bashrc
