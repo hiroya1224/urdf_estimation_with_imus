@@ -62,8 +62,15 @@ rosbag play ./bags/sample/twoimus_200mm_sample.bag
 ```
 **NOTE**: The groundtruth of relative pose is as follows:
 
-- true position: `[-200., 0., 0.]`
+- true position: `[-0.200, 0., 0.]`
 - true rotation(wxyz): `[1., 0., 0., 0.]` or `[-1., 0., 0., 0.]`
+
+When you perform these steps, you will see the following results in terminal 4:
+
+```
+position      : [-0.19706455  0.00316656 -0.00375119]
+rotation(wxyz): [ 9.99877238e-01 -9.64530793e-04 -7.83922661e-03 -1.35323849e-02]
+```
 
 ## Docker
 
