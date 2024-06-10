@@ -6,6 +6,7 @@ from ._noisecov_helper import (_calc_10D_ddnc,
                                _calc_rotation_prediction_noise,
                                _calc_E_R,
                                _calc_E_R_kron_R,
+                               _calc_E_vCMcb_kron_vCMcb,
                                _calc_E_vCMsq_kron_vCMsq,
                                _calc_E_vCM_kron_vCM,
                                _calc_translation_observation_1stmoment,
@@ -13,6 +14,9 @@ from ._noisecov_helper import (_calc_10D_ddnc,
 import numpy as np
 
 class NoiseCovarianceHelper:
+    Eq4th_signs_for_Rtranspose = np.array([ 1, -1,  1, -1,  1, -1,  1, -1,  1,  1, -1,  1, -1,  1,  1, -1,  1,
+       -1,  1,  1, -1,  1, -1,  1,  1,  1, -1,  1, -1,  1,  1, -1,  1,  1,
+        1])
 
     #### aliases for _noisecov_helper ####
 
@@ -73,6 +77,11 @@ class NoiseCovarianceHelper:
 
 
     @staticmethod
+    def calc_E_vCMcb_kron_vCMcb(v, cov_v):
+        return _calc_E_vCMcb_kron_vCMcb(v, cov_v)
+
+
+    @staticmethod
     def calc_E_vCMsq_kron_vCMsq(v, cov_v):
         return _calc_E_vCMsq_kron_vCMsq(v, cov_v)
 
@@ -111,6 +120,16 @@ class NoiseCovarianceHelper:
 
         return vec_CovAx.reshape(m,m).transpose(0,1)
     
+    @staticmethod
+    def calc_E_vCMcb(v, cov_v):
+        Ew = v
+        Cw = cov_v
+        E_wcb = np.zeros((3,3))
+        E_wcb[0,1] = Cw[0,0]*Ew[2] + 2*Cw[0,2]*Ew[0] + Cw[1,1]*Ew[2] + 2*Cw[1,2]*Ew[1] + 3*Cw[2,2]*Ew[2] + Ew[0]**2*Ew[2] + Ew[1]**2*Ew[2] + Ew[2]**3
+        E_wcb[0,2] = -Cw[0,0]*Ew[1] - 2*Cw[0,1]*Ew[0] - 3*Cw[1,1]*Ew[1] - 2*Cw[1,2]*Ew[2] - Cw[2,2]*Ew[1] - Ew[0]**2*Ew[1] - Ew[1]**3 - Ew[1]*Ew[2]**2
+        E_wcb[1,2] = 3*Cw[0,0]*Ew[0] + 2*Cw[0,1]*Ew[1] + 2*Cw[0,2]*Ew[2] + Cw[1,1]*Ew[0] + Cw[2,2]*Ew[0] + Ew[0]**3 + Ew[0]*Ew[1]**2 + Ew[0]*Ew[2]**2
+        E_wcb = E_wcb - E_wcb.T
+        return E_wcb
 
     @staticmethod
     def calc_E_vCMsq(v, cov_v):

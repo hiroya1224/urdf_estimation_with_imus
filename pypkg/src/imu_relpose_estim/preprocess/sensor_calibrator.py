@@ -12,12 +12,16 @@ class CalibrationContainer:
                             'acc_bias': None,
                             'gyro_bias': None}
         self.covariances = {'acc': None,
+                            'dacc': None,
                             'gyro': None,
-                            'dgyro': None,}
+                            'dgyro': None,
+                            'ddgyro': None,}
         
-        self.acc_list_for_cov  = [None for _ in range(cov_size)]
-        self.omg_list_for_cov  = [None for _ in range(cov_size)]
-        self.domg_list_for_cov = [None for _ in range(cov_size)]
+        self.acc_list_for_cov   = [None for _ in range(cov_size)]
+        self.dacc_list_for_cov  = [None for _ in range(cov_size)]
+        self.omg_list_for_cov   = [None for _ in range(cov_size)]
+        self.domg_list_for_cov  = [None for _ in range(cov_size)]
+        self.ddomg_list_for_cov = [None for _ in range(cov_size)]
 
         self.acc_list  = [None for _ in range(acc_size)]
 
