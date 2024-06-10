@@ -34,7 +34,7 @@ class EstimateImuRelativePoseExtendedLeastSquareROS:
             ## The measured values are based on CAD model, so they are (relatively) reliable.
             ## We set their standard deviation to 2mm.
             self.state_t.jointposition_registration(joint_position_wrt_i_measured, joint_position_wrt_j_measured,
-                                                    stddev=2e-3)
+                                                    stddev=1e-2)
             ## joint encoder using IMU
             self.joint_name = self.get_joint_name(this_imu_name, child_imu_name)
             self.imu_encoder_publisher = rospy.Publisher("/joint_imu_encoder/{}".format(self.joint_name),
@@ -80,15 +80,17 @@ class EstimateImuRelativePoseExtendedLeastSquareROS:
 
             ## expectations
             obsvdata.E_force  = msg_to_ndarray(m.acc)
-            # obsvdata.E_dforce = msg_to_ndarray(m.dacc_dt)
+            obsvdata.E_dforce = msg_to_ndarray(m.dacc_dt)
             obsvdata.E_gyro   = msg_to_ndarray(m.gyro)
             obsvdata.E_dgyro  = msg_to_ndarray(m.dgyro_dt)
+            obsvdata.E_ddgyro = msg_to_ndarray(m.ddgyro_ddt)
 
             ## covariances
             obsvdata.Cov_force  = np.array(m.acc_covariance).reshape(3,3)
-            # obsvdata.Cov_dforce = np.array(m.dacc_covariance).reshape(3,3)
+            obsvdata.Cov_dforce = np.array(m.dacc_covariance).reshape(3,3)
             obsvdata.Cov_gyro   = np.array(m.gyro_covariance).reshape(3,3)
             obsvdata.Cov_dgyro  = np.array(m.dgyro_covariance).reshape(3,3)
+            obsvdata.Cov_ddgyro = np.array(m.ddgyro_covariance).reshape(3,3)
 
             _dict[m.frame_id] = obsvdata
 
@@ -140,8 +142,10 @@ class EstimateImuRelativePoseExtendedLeastSquareROS:
             enc_msg = Float64()
             rotated_qmode = np.array([[0,0,0,-1],[0,0,-1,0],[0,1,0,0],[1,0,0,0]]) @ self.state_t.bingham_param.mode_quat
             rotated_angle = -2 * np.arctan2(rotated_qmode[2], rotated_qmode[0])
-            enc_msg.data = np.mod(rotated_angle + np.pi, 2*np.pi) - np.pi
-
+            rotated_angle_rad = np.mod(rotated_angle + np.pi, 2*np.pi) - np.pi
+            rotated_angle_deg = rotated_angle_rad * 180/np.pi
+            enc_msg.data = rotated_angle_deg
+            
             if publish:
                 self.imu_encoder_publisher.publish(enc_msg)
 
@@ -170,8 +174,8 @@ class EstimateImuRelativePoseExtendedLeastSquareROS:
 
         self.pose_publisher.publish(msg)
 
-        rospy.logwarn("position      : {}".format(position))
-        rospy.logwarn("rotation(wxyz): {}".format(rot_wxyz))
+        # rospy.logwarn("position      : {}".format(position))
+        # rospy.logwarn("rotation(wxyz): {}".format(rot_wxyz))
 
 
     def reset_estimation_callback(self, msg):
