@@ -181,12 +181,10 @@ class BinghamHolder:
         self.mode = np.array([1, 0, 0, 0])
 
 
-    def calc_deltaAmat(self,
-                          vec3d_after_rotation: np.ndarray, 
-                          vec3d_before_rotation: np.ndarray,
-                          CovInv=None):
-        if CovInv is None:
-            CovInv = self.CovInv
+    @staticmethod
+    def calc_deltaAmat(vec3d_after_rotation: np.ndarray, 
+                       vec3d_before_rotation: np.ndarray,
+                       CovInv: np.ndarray):
         Hmat = NoiseCovarianceHelper.get_Hmat(vec3d_before_rotation, vec3d_after_rotation)
         deltaA = -0.5 * Hmat.T @ CovInv @ Hmat
         return deltaA
@@ -255,15 +253,11 @@ class BinghamHolderGyro(BinghamHolder):
                forgetting_factor_rotation):
         w_i = this_obsdata.E_gyro
         w_j = child_obsdata.E_gyro
-        deltaA_gyro  = self.calc_deltaAmat(w_i, w_j)
+        deltaA_gyro  = self.calc_deltaAmat(w_i, w_j, self.CovInv)
         self.update_Amat(self.Amat * forgetting_factor_rotation + deltaA_gyro)
     
 
 class BinghamHolderForce(BinghamHolder):
-    prevnorm = [np.zeros(3),  np.zeros(3)]
-    prev_force_CovQ = 0.25 * np.eye(4)
-    A_axiss = np.zeros((4,4))
-
     def update_Qinv(self,
                     this_state: StateDataExtLeastSquare,
                     this_obsdata: ObservationData,
@@ -306,14 +300,15 @@ class BinghamHolderForce(BinghamHolder):
         ## update
         self.CovInv = np.linalg.inv(Q)
 
-
-    def update(self,
+    
+    @classmethod
+    def calc_observation_Amat(cls,
               this_state: StateDataExtLeastSquare,
               this_obsdata: ObservationData,
               child_obsdata: ObservationData,
-              forgetting_factor_rotation):
+              joint_wrt_i: np.ndarray,
+              joint_wrt_j: np.ndarray):
 
-        import rospy
         f_i = -1.*this_obsdata.E_force
         f_j = -1.*child_obsdata.E_force
         joint_wrt_i = this_state.jointposition_wrt_thisframe
@@ -323,11 +318,6 @@ class BinghamHolderForce(BinghamHolder):
         wcm_j  = NoiseCovarianceHelper.calc_E_vCM(child_obsdata.E_gyro)
         dwcm_i = NoiseCovarianceHelper.calc_E_vCM(this_obsdata.E_dgyro)
         dwcm_j = NoiseCovarianceHelper.calc_E_vCM(child_obsdata.E_dgyro)
-
-        df_i = -1.*this_obsdata.E_dforce
-        df_j = -1.*child_obsdata.E_dforce
-        ddwcm_i = NoiseCovarianceHelper.calc_E_vCM(this_obsdata.E_ddgyro)
-        ddwcm_j = NoiseCovarianceHelper.calc_E_vCM(child_obsdata.E_ddgyro)
 
         N = NoiseCovarianceHelper.get_Nmat()
 
@@ -362,51 +352,134 @@ class BinghamHolderForce(BinghamHolder):
         av = A @ theta[:3] + b
         bv = C @ theta[3:] + d
         Sigma_h = np.dot(N, np.dot(np.kron(Cov_Axb_Cyd_plain, np.eye(4) * 0.25), N.T))
-        # deltaA_force = self.calc_deltaAmat(av, bv, CovInv=np.linalg.pinv(Sigma_h))
+
+        deltaA_force = cls.calc_deltaAmat(av, bv, CovInv=np.linalg.pinv(Sigma_h))
+
+        return deltaA_force
+
+
+    @classmethod
+    def calc_prediction_Amat(cls,
+              this_state: StateDataExtLeastSquare,
+              this_obsdata: ObservationData,
+              child_obsdata: ObservationData,
+              Eq4th, CovQ):
+        rotexp_cov = NoiseCovarianceHelper.calc_rotation_prediction_noise(Eq4th,
+                                                                        this_obsdata.E_gyro, child_obsdata.E_gyro,
+                                                                        this_obsdata.Cov_gyro, child_obsdata.Cov_gyro,
+                                                                        this_state.dt)
+        rotpred_noisecov = NoiseCovarianceHelper.calc_nextq_Cov(CovQ, rotexp_cov)
+        rotpred_Amat = RotationHelper.decompose_CovQ(rotpred_noisecov).Amat
+        return rotpred_Amat
+
+
+    def update(self,
+              this_state: StateDataExtLeastSquare,
+              this_obsdata: ObservationData,
+              child_obsdata: ObservationData,
+              forgetting_factor_rotation):
+
+        # import rospy
+        # f_i = -1.*this_obsdata.E_force
+        # f_j = -1.*child_obsdata.E_force
+        # joint_wrt_i = this_state.jointposition_wrt_thisframe
+        # joint_wrt_j = this_state.jointposition_wrt_childframe
+
+        # wcm_i  = NoiseCovarianceHelper.calc_E_vCM(this_obsdata.E_gyro)
+        # wcm_j  = NoiseCovarianceHelper.calc_E_vCM(child_obsdata.E_gyro)
+        # dwcm_i = NoiseCovarianceHelper.calc_E_vCM(this_obsdata.E_dgyro)
+        # dwcm_j = NoiseCovarianceHelper.calc_E_vCM(child_obsdata.E_dgyro)
+
+        # df_i = -1.*this_obsdata.E_dforce
+        # df_j = -1.*child_obsdata.E_dforce
+        # ddwcm_i = NoiseCovarianceHelper.calc_E_vCM(this_obsdata.E_ddgyro)
+        # ddwcm_j = NoiseCovarianceHelper.calc_E_vCM(child_obsdata.E_ddgyro)
+
+        # N = NoiseCovarianceHelper.get_Nmat()
+
+        # ## obsv: plain
+        # A = wcm_i@wcm_i + dwcm_i
+        # b = f_i
+        # C = wcm_j@wcm_j + dwcm_j
+        # d = f_j
+
+        # EA = NoiseCovarianceHelper.calc_E_vCMsq(this_obsdata.E_gyro, this_obsdata.Cov_gyro) + dwcm_i
+        # Eb = f_i
+        # EC = NoiseCovarianceHelper.calc_E_vCMsq(this_obsdata.E_dgyro, this_obsdata.Cov_dgyro) + dwcm_j
+        # Ed = f_j
+        # Cov_b = this_obsdata.Cov_force
+        # Cov_d = child_obsdata.Cov_force
+        # EAkronA = np.kron(EA, EA)
+        # ECkronC = np.kron(EC, EC)
+
+        # cov_theta = np.eye(6)
+        # cov_theta[:3, :3] = joint_wrt_i.covariance
+        # cov_theta[3:, 3:] = joint_wrt_j.covariance
+        # theta = np.hstack([joint_wrt_i.position, joint_wrt_j.position])
+
+        # Cov_Axb_Cyd_plain = HDBinghamHelper.calc_Cov_Axb_Cyd_from_AbCd(
+        #                         EAkronA, ECkronC,
+        #                         np.kron(Eb.reshape(-1,1), EA), np.kron(Ed.reshape(-1,1), EC),
+        #                         EA, EC,
+        #                         Eb, Ed,
+        #                         Cov_b, Cov_d,
+        #                         cov_theta,
+        #                         theta)
+        # av = A @ theta[:3] + b
+        # bv = C @ theta[3:] + d
+        # Sigma_h = np.dot(N, np.dot(np.kron(Cov_Axb_Cyd_plain, np.eye(4) * 0.25), N.T))
+        # # deltaA_force = self.calc_deltaAmat(av, bv, CovInv=np.linalg.pinv(Sigma_h))
+
+        deltaA_force = self.calc_observation_Amat(
+              this_state,
+              this_obsdata,
+              child_obsdata,
+              this_state.jointposition_wrt_thisframe,
+              this_state.jointposition_wrt_childframe)
 
         ## obsv: derivative
-        Ader = np.dot(wcm_i, A) + (dwcm_i@wcm_i + wcm_i@dwcm_i + ddwcm_i)
-        bder = np.dot(wcm_i, b) + df_i
-        Cder = np.dot(wcm_j, C) + (dwcm_j@wcm_j + wcm_j@dwcm_j + ddwcm_j)
-        dder = np.dot(wcm_j, d) + df_j
+        # Ader = np.dot(wcm_i, A) + (dwcm_i@wcm_i + wcm_i@dwcm_i + ddwcm_i)
+        # bder = np.dot(wcm_i, b) + df_i
+        # Cder = np.dot(wcm_j, C) + (dwcm_j@wcm_j + wcm_j@dwcm_j + ddwcm_j)
+        # dder = np.dot(wcm_j, d) + df_j
         # Cov_b_der = HDBinghamHelper.calc_Cov_b_der(this_obsdata.E_gyro, -1.*this_obsdata.E_dforce, this_obsdata.Cov_gyro, this_obsdata.Cov_dforce)
         # Cov_d_der = HDBinghamHelper.calc_Cov_b_der(child_obsdata.E_gyro, -1.*child_obsdata.E_dforce, child_obsdata.Cov_gyro, child_obsdata.Cov_dforce)
         # EAderkronAder = np.kron(EAder, EAder)
         # ECderkronCder = np.kron(ECder, ECder)
         # EbderkronAder = np.kron(Ebder.reshape(-1,1), EAder)
         # EdderkronCder = np.kron(Edder.reshape(-1,1), ECder)
-        obs0 = this_obsdata
-        obs1 = child_obsdata
-        EAder, Ebder, ECder, Edder = HDBinghamHelper.create_E_AbCd_der(obs0.E_gyro, obs1.E_gyro,
-                                                obs0.E_dgyro, obs1.E_dgyro,
-                                                obs0.E_ddgyro, obs1.E_ddgyro,
-                                                -1.*obs0.E_force, -1.*obs1.E_force,
-                                                -1.*obs0.E_dforce, -1.*obs1.E_dforce,
-                                                obs0.Cov_gyro, obs1.Cov_gyro)
-        Cov_b_der = HDBinghamHelper.calc_Cov_b_der(obs0.E_gyro, -1.*obs0.E_dforce, obs0.Cov_gyro, obs0.Cov_dforce)
-        Cov_d_der = HDBinghamHelper.calc_Cov_b_der(obs1.E_gyro, -1.*obs1.E_dforce, obs1.Cov_gyro, obs1.Cov_dforce)
+        # obs0 = this_obsdata
+        # obs1 = child_obsdata
+        # EAder, Ebder, ECder, Edder = HDBinghamHelper.create_E_AbCd_der(obs0.E_gyro, obs1.E_gyro,
+        #                                         obs0.E_dgyro, obs1.E_dgyro,
+        #                                         obs0.E_ddgyro, obs1.E_ddgyro,
+        #                                         -1.*obs0.E_force, -1.*obs1.E_force,
+        #                                         -1.*obs0.E_dforce, -1.*obs1.E_dforce,
+        #                                         obs0.Cov_gyro, obs1.Cov_gyro)
+        # Cov_b_der = HDBinghamHelper.calc_Cov_b_der(obs0.E_gyro, -1.*obs0.E_dforce, obs0.Cov_gyro, obs0.Cov_dforce)
+        # Cov_d_der = HDBinghamHelper.calc_Cov_b_der(obs1.E_gyro, -1.*obs1.E_dforce, obs1.Cov_gyro, obs1.Cov_dforce)
         
-        EAderkronAder = HDBinghamHelper.calc_E_Aderiv_kron_Aderiv(obs0.E_gyro, obs0.E_dgyro, obs0.E_ddgyro, 
-                                                                obs0.Cov_gyro, obs0.Cov_dgyro, obs0.Cov_ddgyro)
-        ECderkronCder = HDBinghamHelper.calc_E_Aderiv_kron_Aderiv(obs1.E_gyro, obs1.E_dgyro, obs1.E_ddgyro, 
-                                                                obs1.Cov_gyro, obs1.Cov_dgyro, obs1.Cov_ddgyro)
-        EbderkronAder = HDBinghamHelper.calc_E_bderiv_kron_Aderiv(obs0.E_gyro, obs0.E_dgyro, obs0.E_ddgyro, 
-                                                                -1.*obs0.E_force, -1.*obs0.E_dforce,
-                                                                obs0.Cov_gyro, obs0.Cov_dgyro, obs0.Cov_ddgyro,
-                                                                obs0.Cov_force, obs0.Cov_dforce)
-        EdderkronCder = HDBinghamHelper.calc_E_bderiv_kron_Aderiv(obs1.E_gyro, obs1.E_dgyro, obs1.E_ddgyro, 
-                                                                -1.*obs1.E_force, -1.*obs1.E_dforce,
-                                                                obs1.Cov_gyro, obs1.Cov_dgyro, obs1.Cov_ddgyro,
-                                                                obs1.Cov_force, obs1.Cov_dforce)
+        # EAderkronAder = HDBinghamHelper.calc_E_Aderiv_kron_Aderiv(obs0.E_gyro, obs0.E_dgyro, obs0.E_ddgyro, 
+        #                                                         obs0.Cov_gyro, obs0.Cov_dgyro, obs0.Cov_ddgyro)
+        # ECderkronCder = HDBinghamHelper.calc_E_Aderiv_kron_Aderiv(obs1.E_gyro, obs1.E_dgyro, obs1.E_ddgyro, 
+        #                                                         obs1.Cov_gyro, obs1.Cov_dgyro, obs1.Cov_ddgyro)
+        # EbderkronAder = HDBinghamHelper.calc_E_bderiv_kron_Aderiv(obs0.E_gyro, obs0.E_dgyro, obs0.E_ddgyro, 
+        #                                                         -1.*obs0.E_force, -1.*obs0.E_dforce,
+        #                                                         obs0.Cov_gyro, obs0.Cov_dgyro, obs0.Cov_ddgyro,
+        #                                                         obs0.Cov_force, obs0.Cov_dforce)
+        # EdderkronCder = HDBinghamHelper.calc_E_bderiv_kron_Aderiv(obs1.E_gyro, obs1.E_dgyro, obs1.E_ddgyro, 
+        #                                                         -1.*obs1.E_force, -1.*obs1.E_dforce,
+        #                                                         obs1.Cov_gyro, obs1.Cov_dgyro, obs1.Cov_ddgyro,
+        #                                                         obs1.Cov_force, obs1.Cov_dforce)
 
-        Cov_Axb_Cyd_der = HDBinghamHelper.calc_Cov_Axb_Cyd_from_AbCd(
-                                EAderkronAder, ECderkronCder,
-                                EbderkronAder, EdderkronCder,
-                                EAder, ECder,
-                                Ebder, Edder,
-                                Cov_b_der, Cov_d_der,
-                                cov_theta,
-                                theta)
+        # Cov_Axb_Cyd_der = HDBinghamHelper.calc_Cov_Axb_Cyd_from_AbCd(
+        #                         EAderkronAder, ECderkronCder,
+        #                         EbderkronAder, EdderkronCder,
+        #                         EAder, ECder,
+        #                         Ebder, Edder,
+        #                         Cov_b_der, Cov_d_der,
+        #                         cov_theta,
+        #                         theta)
 
         ## 微分値を見ていても，静止状態ではどのみち無力(ゼロになってしまって線形独立なペアを求められない)
         ## 別の場の情報，たとえば磁場の情報を追加するほかなさそう
@@ -414,11 +487,11 @@ class BinghamHolderForce(BinghamHolder):
 
         # Cov_Axb_Cyd_der = 2*Cov_Axb_Cyd_plain / this_state.dt**2
 
-        av_der = Ader @ theta[:3] + bder
-        bv_der = Cder @ theta[3:] + dder
+        # av_der = Ader @ theta[:3] + bder
+        # bv_der = Cder @ theta[3:] + dder
 
-        av_der = av_der / np.linalg.norm(av_der)
-        bv_der = bv_der / np.linalg.norm(bv_der)
+        # av_der = av_der / np.linalg.norm(av_der)
+        # bv_der = bv_der / np.linalg.norm(bv_der)
 
         # av_der = (av - self.prevnorm[0]) / this_state.dt
         # bv_der = (bv - self.prevnorm[1]) / this_state.dt
@@ -433,12 +506,12 @@ class BinghamHolderForce(BinghamHolder):
         # rospy.logwarn("EbderkronAder = \n{}".format(EbderkronAder))
         
         # Sigma_h_der = np.dot(N, np.dot(np.kron(Cov_Axb_Cyd_der, self.prev_force_CovQ), N.T))
-        Sigma_h_der = np.dot(N, np.dot(np.kron(Cov_Axb_Cyd_der, np.eye(4) * 0.25), N.T))
+        # Sigma_h_der = np.dot(N, np.dot(np.kron(Cov_Axb_Cyd_der, np.eye(4) * 0.25), N.T))
         # Sigma_h_der = np.dot(N, np.dot(np.kron(Cov_Axb_Cyd_der, CovQ), N.T))
         # HTH_der = - 0.5 * H_der.T @ np.linalg.pinv(Sigma_h_der) @ H_der
         
-        deltaA_force = self.calc_deltaAmat(av, bv, CovInv=np.linalg.pinv(Sigma_h))
-        deltaA_dforce = self.calc_deltaAmat(av_der, bv_der, CovInv=np.linalg.pinv(Sigma_h_der))
+        # deltaA_force = self.calc_deltaAmat(av, bv, CovInv=np.linalg.pinv(Sigma_h))
+        # deltaA_dforce = self.calc_deltaAmat(av_der, bv_der, CovInv=np.linalg.pinv(Sigma_h_der))
 
 
         # deltaA_force = self.calc_deltaAmat(av - 0.01*av_der, bv - 0.01*bv_der, CovInv=np.linalg.pinv(Sigma_h))
@@ -475,46 +548,57 @@ class BinghamHolderForce(BinghamHolder):
         
         ## predict
             
-        rotexp_cov = NoiseCovarianceHelper.calc_rotation_prediction_noise(Eq4th,
-                                                                        this_obsdata.E_gyro, child_obsdata.E_gyro,
-                                                                        this_obsdata.Cov_gyro, child_obsdata.Cov_gyro,
-                                                                        this_state.dt)
-        rotpred_noisecov = NoiseCovarianceHelper.calc_nextq_Cov(CovQ, rotexp_cov)
-        rotpred_Amat = RotationHelper.decompose_CovQ(rotpred_noisecov).Amat
+        # rotexp_cov = NoiseCovarianceHelper.calc_rotation_prediction_noise(Eq4th,
+        #                                                                 this_obsdata.E_gyro, child_obsdata.E_gyro,
+        #                                                                 this_obsdata.Cov_gyro, child_obsdata.Cov_gyro,
+        #                                                                 this_state.dt)
+        # rotpred_noisecov = NoiseCovarianceHelper.calc_nextq_Cov(CovQ, rotexp_cov)
+        # rotpred_Amat = RotationHelper.decompose_CovQ(rotpred_noisecov).Amat
+
+        rotpred_Amat = self.calc_prediction_Amat(this_state, this_obsdata, child_obsdata, Eq4th, CovQ)
 
         # rospy.logwarn("deltaA_force : {}".format(deltaA_force))
         # rospy.logwarn("deltaA_dforce: {}".format(deltaA_dforce))
 
-        ## constraint about joint rotation axis
-        E_R = NoiseCovarianceHelper.calc_E_R(Eq4th)
-        E_R_kron_R = NoiseCovarianceHelper.calc_E_R_kron_R(Eq4th)
-        A_neg_y = np.diag([-1e+9, 0, -1e+9, 0])
-        diff_omega = obs1.E_gyro - E_R @ obs0.E_gyro
+        # ## constraint about joint rotation axis
+        # E_R = NoiseCovarianceHelper.calc_E_R(Eq4th)
+        # E_R_kron_R = NoiseCovarianceHelper.calc_E_R_kron_R(Eq4th)
+        # A_neg_y = np.diag([-1e+9, 0, -1e+9, 0])
+        # diff_omega = obs1.E_gyro - E_R @ obs0.E_gyro
         
-        Cov_diff_omega = obs1.Cov_gyro - NoiseCovarianceHelper.calc_Cov_Ax(E_R_kron_R, E_R, obs0.Cov_gyro, obs0.E_gyro)
-        Cov_diff_omega2 = np.eye(6)
-        Cov_diff_omega2[:3, :3] = Cov_diff_omega
-        Cov_diff_omega2[3:, 3:] = Cov_diff_omega
-        A_axis = self.calc_deltaAmat(diff_omega, diff_omega,
-                                     CovInv=np.linalg.pinv(
-                                         np.dot(N, np.dot(np.kron(Cov_diff_omega2, np.eye(4) / 4.), N.T)))
-        )
+        # Cov_diff_omega = obs1.Cov_gyro - NoiseCovarianceHelper.calc_Cov_Ax(E_R_kron_R, E_R, obs0.Cov_gyro, obs0.E_gyro)
+        # Cov_diff_omega2 = np.eye(6)
+        # Cov_diff_omega2[:3, :3] = Cov_diff_omega
+        # Cov_diff_omega2[3:, 3:] = Cov_diff_omega
+        # A_axis = self.calc_deltaAmat(diff_omega, diff_omega,
+        #                              CovInv=np.linalg.pinv(
+        #                                  np.dot(N, np.dot(np.kron(Cov_diff_omega2, np.eye(4) / 4.), N.T)))
+        # )
 
-        update_rate = 1 - np.exp(-1.*np.dot(diff_omega, diff_omega))
-        self.A_axiss = A_axis * update_rate + self.A_axiss * (1 - update_rate)
+        # movement = (np.linalg.norm(obs0.E_gyro) - np.linalg.norm(obs1.E_gyro))
+        # _update_rate = 1 - np.exp(-0.5 * movement**2)
+        # self.A_axiss = A_axis * update_rate + self.A_axiss * (1 - update_rate)
+        # self.update_rates.append(_update_rate)
+        # self.update_rates.pop(0)
+        # update_rate = np.mean(self.update_rates)
 
+        # rospy.logwarn("update_rate: {}".format(update_rate))
+
+
+        # Amat = deltaA_force + A_neg_y + rotpred_Amat
         # rospy.logwarn("rotpred_Amat: {}".format(np.linalg.eigh(rotpred_Amat)[1][:,-1]))
         # constrainted_A = deltaA_force + A_neg_y 
-        constrainted_A = deltaA_force + A_neg_y + rotpred_Amat
+        # constrainted_A = (1 - update_rate) * self.prev_force_CovQ + update_rate * Amat
         # constrainted_A = rotpred_Amat
         # constrainted_A = deltaA_dforce + deltaA_force #+ rotpred_Amat
-        # constrainted_A = deltaA_force + rotpred_Amat
+        # constrainted_A = A_neg_y + rotpred_Amat
         # constrainted_A = deltaA_force + rotpred_Amat
         # constrainted_A = deltaA_dforce 
-        # constrainted_A = A_axis + deltaA_force + rotpred_Amat
+        constrainted_A = deltaA_force #+ rotpred_Amat
         # constrainted_A = self.A_axiss
+        # constrainted_A = Amat
 
-        self.prev_force_CovQ = RotationHelper.decompose_Amat(A_axis).CovQ
+        # self.prev_force_CovQ = constrainted_A
 
 
         # mode = np.linalg.eigh(deltaA_force)[1][:, -1]
@@ -522,7 +606,8 @@ class BinghamHolderForce(BinghamHolder):
 
         # curr = av - Rmat @ bv
 
-        rospy.logwarn("diff_omega: {}".format(diff_omega))
+        # rospy.logwarn("diff_omega: {}, gyro0: {}, gyro1: {}".format(diff_omega, obs0.E_gyro, obs1.E_gyro))
+        # rospy.logwarn("movement: {}".format(1 - np.exp(-movement**2)))
 
         # rospy.logwarn("theta: {}".format(theta))
         # rospy.logwarn("EA @ theta[:3] : {}".format(EA @ theta[:3]))
@@ -530,7 +615,7 @@ class BinghamHolderForce(BinghamHolder):
         # # rospy.logwarn("diff    : {}".format( (curr - self.prevnorm) / this_state.dt ))
         # rospy.logwarn("diff_ana: {}".format( av_der - Rmat @ bv_der ))
 
-        self.prevnorm = [av, bv]
+        # self.prevnorm = [av, bv]
 
         self.update_Amat(constrainted_A)
 
