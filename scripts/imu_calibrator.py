@@ -199,9 +199,6 @@ class ImuCalibratorROS:
                 calib_data.dgyro_covariance = covs["dgyro"].flatten()
                 calib_data.ddgyro_covariance = covs["ddgyro"].flatten()
                 
-                # rospy.logwarn("acc_calib = {}".format(acc_calib))
-                # rospy.logwarn("omg_calib = {}".format(omg_calib))
-                # rospy.logwarn("{}: norm(acc_calib) = {}".format(data.frame_id, np.linalg.norm(acc_calib)))
                 rospy.logwarn_once("publishing...")
 
                 data_list.append(calib_data)
