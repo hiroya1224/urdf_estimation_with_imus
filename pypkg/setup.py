@@ -17,7 +17,7 @@ print(find_packages(where="src"))
 
 setup(
     name="imu_relativepose_estimator",
-    version="1.0.0",
+    version="1.1.0",
     author='Hiroya Sato',
     description="The package of the estimator of the IMUs' relative pose.",
     package_dir={'': "src"},
@@ -27,6 +27,12 @@ setup(
         Pybind11Extension(
             'imu_relpose_estim.utils._noisecov_helper',
             ['exts/noisecov_helper.cpp'],
+            language='c++',
+            extra_compile_args = ['-std=c++11', '-Wall', '-O3'],
+        ),
+        Pybind11Extension(
+            'imu_relpose_estim.utils._hdbingham_helper',
+            ['exts/hdbingham_helper.cpp'],
             language='c++',
             extra_compile_args = ['-std=c++11', '-Wall', '-O3'],
         ),

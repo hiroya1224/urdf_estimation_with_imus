@@ -4,6 +4,7 @@ import roslib.packages
 import numpy as np
 import yaml
 from urdf_estimation_with_imus.msg import ImuDataFiltered, ImuDataFilteredList
+# from urdf_estimation_with_imus.msg import ImuDataFilteredWithMag, ImuDataFilteredWithMagList
 from imu_relpose_estim.preprocess.sensor_calibrator import CalibrationContainer, ImuCalibrator
 
 
@@ -35,11 +36,12 @@ class ImuCalibratorROS:
 
     @classmethod
     def get_3darrays_from_msgdata(cls, data):
-        acc_raw  = cls.convert_rosmsg_to_3Darray(data.acc)
-        # dacc_raw = self.convert_rosmsg_to_3Darray(data.dacc_dt)
-        omg_raw  = cls.convert_rosmsg_to_3Darray(data.gyro)
-        domg_raw = cls.convert_rosmsg_to_3Darray(data.dgyro_dt)
-        return acc_raw, omg_raw, domg_raw
+        acc_raw   = cls.convert_rosmsg_to_3Darray(data.acc)
+        dacc_raw  = cls.convert_rosmsg_to_3Darray(data.dacc_dt)
+        omg_raw   = cls.convert_rosmsg_to_3Darray(data.gyro)
+        domg_raw  = cls.convert_rosmsg_to_3Darray(data.dgyro_dt)
+        ddomg_raw = cls.convert_rosmsg_to_3Darray(data.ddgyro_ddt)
+        return acc_raw, dacc_raw, omg_raw, domg_raw, ddomg_raw
     
 
     @staticmethod
@@ -75,7 +77,7 @@ class ImuCalibratorROS:
             container.calib_param['acc_scaler'] = np.array(loaded_calib_config['acc_scaler']).reshape(3,3)
             container.calib_param['acc_bias'] = np.array(loaded_calib_config['acc_bias'])
             container.calib_param['gyro_bias'] = np.array(loaded_calib_config['gyro_bias'])
-            rospy.logwarn("{}: loaded pre-calibrated param (vendor_id = {})".format(frame_id, container.vendor_id))
+            rospy.logwarn_once("{}: loaded pre-calibrated param (vendor_id = {})".format(frame_id, container.vendor_id))
         else:
             self.calib_config[container.vendor_id] = dict()
 
@@ -87,16 +89,17 @@ class ImuCalibratorROS:
 
         container = self.container[data.frame_id]
         container.set_vendor_id(data.vendor_id)
-        acc_raw, omg_raw, domg_raw = self.get_3darrays_from_msgdata(data)
+        acc_raw, dacc_raw, omg_raw, domg_raw, ddomg_raw = self.get_3darrays_from_msgdata(data)
 
         ## first step: detect gyro bias and calc covariances
         if container.covariances["acc"] is None:
             ## static: here we estimate covariance and bias of gyroscopes
             ## for covariance estimation
             self.update_list(container.acc_list_for_cov, acc_raw)
-            # self.update_list(container.dacc_list_for_cov, dacc_raw)
+            self.update_list(container.dacc_list_for_cov, dacc_raw)
             self.update_list(container.omg_list_for_cov, omg_raw)
             self.update_list(container.domg_list_for_cov, domg_raw)
+            self.update_list(container.ddomg_list_for_cov, ddomg_raw)
 
             counter = [e is None for e in container.omg_list_for_cov].count(False)
             if counter % 50 == 0:
@@ -109,9 +112,10 @@ class ImuCalibratorROS:
 
                 ## covariances
                 container.covariances["acc"]   = np.cov(np.vstack(container.acc_list_for_cov).T)
-                # container.covariances["dacc"]  = np.cov(np.vstack(container.dacc_list_for_cov).T)
+                container.covariances["dacc"]  = np.cov(np.vstack(container.dacc_list_for_cov).T)
                 container.covariances["gyro"]  = np.cov(np.vstack(container.omg_list_for_cov).T)
                 container.covariances["dgyro"] = np.cov(np.vstack(container.domg_list_for_cov).T)
+                container.covariances["ddgyro"] = np.cov(np.vstack(container.ddomg_list_for_cov).T)
             
             return 1
         
@@ -122,7 +126,7 @@ class ImuCalibratorROS:
             self.update_list(container.acc_list, acc_raw)
 
             counter = [e is None for e in acc_list].count(False)
-
+            
             if counter % 50 == 0:
                 rospy.logwarn("Rotate your robot slowly: {} / {}".format(counter, container.acc_size))
 
@@ -173,31 +177,31 @@ class ImuCalibratorROS:
                 calib_data = ImuDataFiltered()
 
                 container = self.get_container(data.frame_id)
-                acc_raw, omg_raw, domg_raw = self.get_3darrays_from_msgdata(data)
+                acc_raw, dacc_raw, omg_raw, domg_raw, ddomg_raw = self.get_3darrays_from_msgdata(data)
 
                 calib_param = container.calib_param
                 calib_data.frame_id = data.frame_id
 
                 acc_calib  = ImuCalibrator.calc_calibrated_acc(acc_raw, calib_param)
-                # dacc_calib = ImuCalibrator.calc_calibrated_dacc(dacc_raw, calib_param)
+                dacc_calib = ImuCalibrator.calc_calibrated_dacc(dacc_raw, calib_param)
                 omg_calib  = omg_raw - calib_param["gyro_bias"]
                 domg_calib = domg_raw
+                ddomg_calib = ddomg_raw
 
                 covs = container.covariances
 
                 self.convert_3Darray_to_rosmsg(acc_calib,  calib_data.acc)
-                # self.convert_3Darray_to_rosmsg(dacc_calib, calib_data.dacc_dt)
+                self.convert_3Darray_to_rosmsg(dacc_calib, calib_data.dacc_dt)
                 self.convert_3Darray_to_rosmsg(omg_calib,  calib_data.gyro)
                 self.convert_3Darray_to_rosmsg(domg_calib, calib_data.dgyro_dt)
+                self.convert_3Darray_to_rosmsg(ddomg_calib, calib_data.ddgyro_ddt)
 
                 calib_data.acc_covariance = ImuCalibrator.calc_calibrated_cov_acc(covs["acc"], calib_param).flatten()
-                # calib_data.dacc_covariance = ImuCalibrator.calc_calibrated_cov_dacc(covs["dacc"], calib_param).flatten()
+                calib_data.dacc_covariance = ImuCalibrator.calc_calibrated_cov_dacc(covs["dacc"], calib_param).flatten()
                 calib_data.gyro_covariance = covs["gyro"].flatten()
                 calib_data.dgyro_covariance = covs["dgyro"].flatten()
+                calib_data.ddgyro_covariance = covs["ddgyro"].flatten()
                 
-                # rospy.logwarn("acc_calib = {}".format(acc_calib))
-                # rospy.logwarn("omg_calib = {}".format(omg_calib))
-                # rospy.logwarn("{}: norm(acc_calib) = {}".format(data.frame_id, np.linalg.norm(acc_calib)))
                 rospy.logwarn_once("publishing...")
 
                 data_list.append(calib_data)

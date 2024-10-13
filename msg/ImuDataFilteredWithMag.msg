@@ -17,3 +17,6 @@ float64[9] acc_covariance # Row major x, y, z
 
 geometry_msgs/Vector3 dacc_dt
 float64[9] dacc_covariance # Row major x, y, z
+
+geometry_msgs/Vector3 mag
+float64[9] mag_covariance # Row major x, y, z

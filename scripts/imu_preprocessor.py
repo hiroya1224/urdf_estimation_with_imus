@@ -2,7 +2,7 @@
 import rospy
 import numpy as np
 from urdf_estimation_with_imus.msg import ImuDataFiltered, ImuDataFilteredList
-from sensor_msgs.msg import Imu
+from sensor_msgs.msg import Imu, MagneticField
 import xml.etree.ElementTree as ET
 
 from imu_relpose_estim.preprocess.sensor_dataproc import ImuPreprocessor, DataContainerForFiltering
@@ -21,7 +21,7 @@ class ImuPreprocessorROS:
         else:
             self.sorted_imu_names = sorted_imu_names
 
-        self.container  = dict([(imu_name, DataContainerForFiltering(7)) for imu_name in self.sorted_imu_names])
+        self.container  = dict([(imu_name, DataContainerForFiltering(size=11, poly_deg=7)) for imu_name in self.sorted_imu_names])
         self.vendor_ids = dict([(imu_name, "") for imu_name in self.sorted_imu_names])
         
         self.topic_name = "/imu_filtered/calib" if publish_calib else "/imu_filtered/raw"
@@ -53,7 +53,7 @@ class ImuPreprocessorROS:
             if time_interpolated is None:
                 return None
 
-            gyroacc_at_baset0, dgyrodacc_at_baset0 = time_interpolated
+            gyroacc_at_baset0, dgyrodacc_at_baset0, ddgyroddacc_at_baset0 = time_interpolated
 
             if np.all(np.isclose(gyroacc_at_baset0, 0.0)) or np.all(np.isclose(dgyrodacc_at_baset0, 0.0)):
                 continue
@@ -72,14 +72,18 @@ class ImuPreprocessorROS:
             data.dgyro_dt.x = dgyrodacc_at_baset0[0]
             data.dgyro_dt.y = dgyrodacc_at_baset0[1]
             data.dgyro_dt.z = dgyrodacc_at_baset0[2]
-            # data.dacc_dt.x  = dgyrodacc_at_baset0[3]
-            # data.dacc_dt.y  = dgyrodacc_at_baset0[4]
-            # data.dacc_dt.z  = dgyrodacc_at_baset0[5]
+            data.dacc_dt.x  = dgyrodacc_at_baset0[3]
+            data.dacc_dt.y  = dgyrodacc_at_baset0[4]
+            data.dacc_dt.z  = dgyrodacc_at_baset0[5]
+            data.ddgyro_ddt.x = ddgyroddacc_at_baset0[0]
+            data.ddgyro_ddt.y = ddgyroddacc_at_baset0[1]
+            data.ddgyro_ddt.z = ddgyroddacc_at_baset0[2]
 
             data.gyro_covariance  = np.eye(3).flatten() * self.covariance_param
             data.dgyro_covariance = np.eye(3).flatten() * self.covariance_param
+            data.ddgyro_covariance = np.eye(3).flatten() * self.covariance_param
             data.acc_covariance   = np.eye(3).flatten() * self.covariance_param
-            # data.dacc_covariance  = np.eye(3).flatten() * self.covariance_param
+            data.dacc_covariance  = np.eye(3).flatten() * self.covariance_param
 
             interpolated_result.append(data)
 
@@ -96,6 +100,7 @@ class ImuPreprocessorROS:
     def callback(self, msg):
         frame_id, vendor_id = self.parse_frame_id(msg.header.frame_id)
         if not frame_id in self.container.keys():
+            rospy.logerr("{} is not in {}".format(frame_id, self.container.keys()))
             return None
         
         self.vendor_ids[frame_id] = vendor_id
@@ -126,7 +131,9 @@ if __name__ == '__main__':
 
     rospy.init_node(args.__name, anonymous=False)
 
-    symbolic_robot_description = rospy.get_param("/symbolic_robot_description")
+    symbolic_robot_description = None
+    if args.subs_imus is None:
+        symbolic_robot_description = rospy.get_param("/symbolic_robot_description")
     preproc = ImuPreprocessorROS(symbolic_robot_description, args.publish_calib, args.subs_imus, args.cov)
     imu_sub = rospy.Subscriber("/imu", Imu, preproc.callback)
     rospy.logwarn("publishing to {}".format(preproc.topic_name))

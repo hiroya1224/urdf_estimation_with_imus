@@ -5,6 +5,15 @@ from .dataclasses import BinghamParameterKalmanFilter
 class RotationHelper:
 
     @staticmethod
+    def quat_product(q1_wxyz, q2_wxyz):
+        a1, b1, c1, d1 = q1_wxyz
+        a2, b2, c2, d2 = q2_wxyz
+        return np.array([a1*a2 - b1*b2 - c1*c2 - d1*d2,
+                         a1*b2 + b1*a2 + c1*d2 - d1*c2,
+                         a1*c2 - b1*d2 + c1*a2 + d1*b2,
+                         a1+d2 + b1*c2 - c1*b2 + d1*a2])
+
+    @staticmethod
     def quat_to_rotmat(w,x,y,z):
         n11 = w**2 + x**2 - y**2 - z**2
         n21 = 2*(x*y + w*z)

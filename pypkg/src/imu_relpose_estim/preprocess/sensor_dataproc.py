@@ -20,8 +20,8 @@ class DataContainerForFiltering:
         self.poly_deg = poly_deg
 
         self._t = self.UpdatingList([0 for _ in range(size)])
-        self.acc = self.UpdatingList([None for _ in range(size)])
-        self.omg = self.UpdatingList([None for _ in range(size)])
+        self.acc = self.UpdatingList([np.zeros(3) for _ in range(size)])
+        self.omg = self.UpdatingList([np.zeros(3) for _ in range(size)])
 
         ## poly_deg-th degree polynomial
         ## (deg + 1, len(omega) + len(acc))
@@ -42,6 +42,12 @@ class ImuPreprocessor:
     @staticmethod
     def interpolated_derivative_value(coeff, t):
         dts = np.array([i * t**(max(0, i-1)) for i in range(len(coeff))])
+        return np.dot(coeff.T, dts)
+    
+
+    @staticmethod
+    def interpolated_2nd_derivative_value(coeff, t):
+        dts = np.array([(i-1)*i * t**(max(0, i-2)) for i in range(len(coeff))])
         return np.dot(coeff.T, dts)
     
 
@@ -71,14 +77,8 @@ class ImuPreprocessor:
         shift_t = np.array(container._t.list) - focusing_t
 
         A = np.vstack([shift_t ** i for i in range(container.poly_deg + 1)]).T
-
-        # if np.any(None in container.omg.list) or np.any(None in container.acc.list):
-        #     return None
-        try:
-            omegas = np.vstack(container.omg.list)
-            accs = np.vstack(container.acc.list)
-        except ValueError:
-            return None
+        omegas = np.vstack(container.omg.list)
+        accs = np.vstack(container.acc.list)
 
         raw_data = np.hstack([omegas, accs])
         coeffs = np.linalg.pinv(A) @ raw_data
@@ -90,11 +90,9 @@ class ImuPreprocessor:
     def time_interpolation(cls, base_midtime, gapped_midtime, filter_coeffs, t_list):
         ## avoid extrapolation (extrapolation makes estimation results extremely unstable)
         if base_midtime < t_list[0]:
-            # base_midtime = t_list[0]
-            return None
+            base_midtime = t_list[0]
         if base_midtime > t_list[-1]:
-            # base_midtime = t_list[-1]
-            return None
+            base_midtime = t_list[-1]
 
         deltaT = gapped_midtime - base_midtime
 
@@ -106,5 +104,9 @@ class ImuPreprocessor:
             filter_coeffs,
             -deltaT
         )
+        ddgyroddacc_at_baset0 = cls.interpolated_2nd_derivative_value(
+            filter_coeffs,
+            -deltaT
+        )
 
-        return gyroacc_at_baset0, dgyrodacc_at_baset0
+        return gyroacc_at_baset0, dgyrodacc_at_baset0, ddgyroddacc_at_baset0

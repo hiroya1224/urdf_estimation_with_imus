@@ -21,6 +21,8 @@ add_message_files(
    FILES
    ImuDataFiltered.msg
    ImuDataFilteredList.msg
+   ImuDataFilteredWithMag.msg
+   ImuDataFilteredWithMagList.msg
    PoseWithCovAndBingham.msg
 )
 

@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import axes3d, Axes3D
 from matplotlib import gridspec
 
-from urdf_estimation_with_imus.msg import PoseWithCovAndBingham
+from urdf_estimation_with_imus.msg import PoseWithCovAndBingham, ImuDataFilteredList
 
 import bingham.visualize.SO3s as vSO3
 from bingham.distribution import BinghamDistribution
@@ -27,6 +27,7 @@ rospy.init_node('relpose_estimation_viewer', anonymous=False)
 viewer = Visualizer()
 pubname_suffix = "{}__to__{}".format(args.this, args.child)
 imu_sub = rospy.Subscriber("/estimated_relative_pose/{}".format(pubname_suffix), PoseWithCovAndBingham, viewer.callback)
+calib_data = rospy.Subscriber("/imu_filtered/calib", ImuDataFilteredList, lambda msg: viewer.callback_rawdata(msg, args.this, args.child))
 
 print(pubname_suffix)
 
@@ -59,6 +60,38 @@ while not rospy.is_shutdown():
         viewer.axes[k].set_xlabel(viewer.plot_label[k][0])
         viewer.axes[k].set_ylabel(viewer.plot_label[k][1])
 
+    
+    viewer.imu_this_ax_acc.cla()
+    viewer.imu_this_ax_gyr.cla()
+    viewer.imu_child_ax_acc.cla()
+    viewer.imu_child_ax_gyr.cla()
+
+    viewer.imu_this_ax_acc.set_title("Accel. of {}".format(args.this))
+    viewer.imu_this_ax_gyr.set_title("Gryo. of {}".format(args.this))
+    viewer.imu_child_ax_acc.set_title("Accel. of {}".format(args.child))
+    viewer.imu_child_ax_gyr.set_title("Gyro. of {}".format(args.child))
+
+    this_t = viewer.imu_plot_config["this"]["timestamps"]
+    if len(this_t) > 0:
+        ## acc
+        viewer.imu_this_ax_acc.plot(this_t, np.array(viewer.imu_plot_config["this"]["acc"]).T[0], 'r-')
+        viewer.imu_this_ax_acc.plot(this_t, np.array(viewer.imu_plot_config["this"]["acc"]).T[1], 'g-')
+        viewer.imu_this_ax_acc.plot(this_t, np.array(viewer.imu_plot_config["this"]["acc"]).T[2], 'b-')
+        ## gyr
+        viewer.imu_this_ax_gyr.plot(this_t, np.array(viewer.imu_plot_config["this"]["gyr"]).T[0], 'r-')
+        viewer.imu_this_ax_gyr.plot(this_t, np.array(viewer.imu_plot_config["this"]["gyr"]).T[1], 'g-')
+        viewer.imu_this_ax_gyr.plot(this_t, np.array(viewer.imu_plot_config["this"]["gyr"]).T[2], 'b-')
+
+    child_t = viewer.imu_plot_config["child"]["timestamps"]
+    if len(child_t) > 0:
+        ## acc
+        viewer.imu_child_ax_acc.plot(child_t, np.array(viewer.imu_plot_config["child"]["acc"]).T[0], 'r-')
+        viewer.imu_child_ax_acc.plot(child_t, np.array(viewer.imu_plot_config["child"]["acc"]).T[1], 'g-')
+        viewer.imu_child_ax_acc.plot(child_t, np.array(viewer.imu_plot_config["child"]["acc"]).T[2], 'b-')
+        ## gyr
+        viewer.imu_child_ax_gyr.plot(child_t, np.array(viewer.imu_plot_config["child"]["gyr"]).T[0], 'r-')
+        viewer.imu_child_ax_gyr.plot(child_t, np.array(viewer.imu_plot_config["child"]["gyr"]).T[1], 'g-')
+        viewer.imu_child_ax_gyr.plot(child_t, np.array(viewer.imu_plot_config["child"]["gyr"]).T[2], 'b-')
 
 # def draw_bingham_distribution(ax, bdistr, quat_gt, num_samples=500, probability=0.7, **kwargs_to_drawSO3):
 

@@ -23,18 +23,24 @@ class EstimateImuRelativePoseExtendedLeastSquareROS:
         self.this_imu_name = this_imu_name
         self.child_imu_name = child_imu_name
 
-        ## make list of IMUs for registration of joint relative position
-        all_IMU_link_pose_wrt_assoc_joint = UrdfLinkTree.get_all_IMU_link_pose_wrt_assoc_joint(symbolic_urdf)
-        rospy.logwarn("{}, {}: {}".format(this_imu_name, child_imu_name, self.check_imu_name(this_imu_name, child_imu_name)))
+        if symbolic_urdf is None:
+            use_symurdf = False
+        else:
+            use_symurdf = True
+
+        if use_symurdf:
+            ## make list of IMUs for registration of joint relative position
+            all_IMU_link_pose_wrt_assoc_joint = UrdfLinkTree.get_all_IMU_link_pose_wrt_assoc_joint(symbolic_urdf)
+            rospy.logwarn("{}, {}: {}".format(this_imu_name, child_imu_name, self.check_imu_name(this_imu_name, child_imu_name)))
 
         ## register joint relative position of IMUs are on the same module
-        if self.check_imu_name(this_imu_name, child_imu_name):
+        if use_symurdf and self.check_imu_name(this_imu_name, child_imu_name):
             joint_position_wrt_i_measured = np.linalg.inv(all_IMU_link_pose_wrt_assoc_joint[this_imu_name])[:3, 3]
             joint_position_wrt_j_measured = np.linalg.inv(all_IMU_link_pose_wrt_assoc_joint[child_imu_name])[:3, 3]
             ## The measured values are based on CAD model, so they are (relatively) reliable.
             ## We set their standard deviation to 2mm.
             self.state_t.jointposition_registration(joint_position_wrt_i_measured, joint_position_wrt_j_measured,
-                                                    stddev=2e-3)
+                                                    stddev=1e-2)
             ## joint encoder using IMU
             self.joint_name = self.get_joint_name(this_imu_name, child_imu_name)
             self.imu_encoder_publisher = rospy.Publisher("/joint_imu_encoder/{}".format(self.joint_name),
@@ -68,27 +74,30 @@ class EstimateImuRelativePoseExtendedLeastSquareROS:
 
 
     @staticmethod
-    def rosmsg_to_obsvdata_dict(msg: ImuDataFilteredList):
+    def rosmsg_to_obsvdata_dict(msg: ImuDataFilteredList, inverted_force=False):
         ## helper
         def msg_to_ndarray(msg):
             return np.array([msg.x, msg.y, msg.z])
         
         _dict = dict()
+        sgn = -1 if inverted_force else +1
         for m in msg.data:
             ## initialize
             obsvdata = ObservationData.empty()
 
             ## expectations
-            obsvdata.E_force  = msg_to_ndarray(m.acc)
-            # obsvdata.E_dforce = msg_to_ndarray(m.dacc_dt)
+            obsvdata.E_force  = sgn*msg_to_ndarray(m.acc)
+            obsvdata.E_dforce = sgn*msg_to_ndarray(m.dacc_dt)
             obsvdata.E_gyro   = msg_to_ndarray(m.gyro)
             obsvdata.E_dgyro  = msg_to_ndarray(m.dgyro_dt)
+            obsvdata.E_ddgyro = msg_to_ndarray(m.ddgyro_ddt)
 
             ## covariances
             obsvdata.Cov_force  = np.array(m.acc_covariance).reshape(3,3)
-            # obsvdata.Cov_dforce = np.array(m.dacc_covariance).reshape(3,3)
+            obsvdata.Cov_dforce = np.array(m.dacc_covariance).reshape(3,3)
             obsvdata.Cov_gyro   = np.array(m.gyro_covariance).reshape(3,3)
             obsvdata.Cov_dgyro  = np.array(m.dgyro_covariance).reshape(3,3)
+            obsvdata.Cov_ddgyro = np.array(m.ddgyro_covariance).reshape(3,3)
 
             _dict[m.frame_id] = obsvdata
 
@@ -140,8 +149,10 @@ class EstimateImuRelativePoseExtendedLeastSquareROS:
             enc_msg = Float64()
             rotated_qmode = np.array([[0,0,0,-1],[0,0,-1,0],[0,1,0,0],[1,0,0,0]]) @ self.state_t.bingham_param.mode_quat
             rotated_angle = -2 * np.arctan2(rotated_qmode[2], rotated_qmode[0])
-            enc_msg.data = np.mod(rotated_angle + np.pi, 2*np.pi) - np.pi
-
+            rotated_angle_rad = np.mod(rotated_angle + np.pi, 2*np.pi) - np.pi
+            rotated_angle_deg = rotated_angle_rad * 180/np.pi
+            enc_msg.data = rotated_angle_deg
+            
             if publish:
                 self.imu_encoder_publisher.publish(enc_msg)
 
@@ -170,8 +181,8 @@ class EstimateImuRelativePoseExtendedLeastSquareROS:
 
         self.pose_publisher.publish(msg)
 
-        rospy.logwarn("position      : {}".format(position))
-        rospy.logwarn("rotation(wxyz): {}".format(rot_wxyz))
+        # rospy.logwarn("position      : {}".format(position))
+        # rospy.logwarn("rotation(wxyz): {}".format(rot_wxyz))
 
 
     def reset_estimation_callback(self, msg):
@@ -184,6 +195,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--this", type=str, help="frame_id of IMU whose pose to be estimated")
     parser.add_argument("--child", type=str, help="frame_id of IMU whose parent's pose to be estimated")
+    parser.add_argument("--nosymburdf", action="store_true")
     parser.add_argument("--only_this_gyro", action="store_false")
     parser.add_argument("__name", default="", nargs="?", help="for roslaunch")
     parser.add_argument("__log", default="", nargs="?", help="for roslaunch")
@@ -191,7 +203,7 @@ if __name__ == '__main__':
 
     rospy.init_node('imu_relpose_estimator_leastsq', anonymous=True)
 
-    symbolic_robot_description = rospy.get_param("/symbolic_robot_description")
+    symbolic_robot_description = rospy.get_param("/symbolic_robot_description") if not args.nosymburdf else None
 
     pf = EstimateImuRelativePoseExtendedLeastSquareROS(args.this, args.child, symbolic_robot_description,
                                                        use_child_gyro=False)

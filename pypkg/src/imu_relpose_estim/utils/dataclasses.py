@@ -286,19 +286,21 @@ class ObservationData:
     def __init__(self,
                  dt,
                  force, dforce, 
-                 gyro, dgyro,
+                 gyro, dgyro, ddgyro,
                  force_cov, dforce_cov,
-                 gyro_cov, dgyro_cov):
+                 gyro_cov, dgyro_cov, ddgyro_cov):
 
         self.E_force = force
         self.E_dforce = dforce
         self.E_gyro = gyro
         self.E_dgyro = dgyro
+        self.E_ddgyro = ddgyro
 
         self.Cov_force = force_cov
         self.Cov_dforce = dforce_cov
         self.Cov_gyro = gyro_cov
         self.Cov_dgyro = dgyro_cov
+        self.Cov_ddgyro = ddgyro_cov
 
         self.dt = dt
 
@@ -307,25 +309,27 @@ class ObservationData:
 
     @classmethod
     def empty(cls):
-        return cls(*([None]*9))
+        return cls(*([None]*11))
     
 
     def update(self,
                dt,
-               force, dforce, 
-               gyro, dgyro,
-               force_cov, dforce_cov,
-               gyro_cov, dgyro_cov):
+                force, dforce, 
+                gyro, dgyro, ddgyro,
+                force_cov, dforce_cov,
+                gyro_cov, dgyro_cov, ddgyro_cov):
 
         self.E_force = force
         self.E_dforce = dforce
         self.E_gyro = gyro
         self.E_dgyro = dgyro
+        self.E_ddgyro = ddgyro
 
         self.Cov_force = force_cov
         self.Cov_dforce = dforce_cov
         self.Cov_gyro = gyro_cov
         self.Cov_dgyro = dgyro_cov
+        self.Cov_ddgyro = ddgyro_cov
 
         self.dt = dt
 
