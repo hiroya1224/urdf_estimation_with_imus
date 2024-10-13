@@ -99,7 +99,8 @@ class ImuCalibratorROS:
             self.update_list(container.domg_list_for_cov, domg_raw)
 
             counter = [e is None for e in container.omg_list_for_cov].count(False)
-            rospy.logwarn("Do not move your robot: {} / {}".format(counter, container.omg_size))
+            if counter % 50 == 0:
+                rospy.logwarn("Do not move your robot: {} / {}".format(counter, container.omg_size))
 
             if not container.omg_list_for_cov[0] is None:
                 omega_dataset = np.vstack(container.omg_list_for_cov).T
@@ -121,7 +122,9 @@ class ImuCalibratorROS:
             self.update_list(container.acc_list, acc_raw)
 
             counter = [e is None for e in acc_list].count(False)
-            rospy.logwarn("Rotate your robot slowly: {} / {}".format(counter, container.acc_size))
+
+            if counter % 50 == 0:
+                rospy.logwarn("Rotate your robot slowly: {} / {}".format(counter, container.acc_size))
 
             if not acc_list[0] is None:
                 acc_dataset = np.vstack(acc_list).T
