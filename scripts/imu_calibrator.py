@@ -225,7 +225,7 @@ if __name__ == '__main__':
 
     rospy.init_node(args.__name, anonymous=False)
 
-    calib = ImuCalibratorROS(acc_size=10000, omg_size=1000,
+    calib = ImuCalibratorROS(acc_size=20000, omg_size=2000,
                              calib_param_yaml="{}/config/imu_calibparams.yaml".format(roslib.packages.get_pkg_dir("urdf_estimation_with_imus")),
                              force_recalib=args.recalib)
     imu_sub = rospy.Subscriber("/imu_filtered/raw", ImuDataFilteredList, calib.callback)

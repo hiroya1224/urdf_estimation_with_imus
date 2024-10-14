@@ -37,7 +37,7 @@ class RelativePoseWebsocketNode:
 
         # Subscriberの作成
         # rospy.Subscriber("/estimated_relative_pose/imucdfe20__to__imua01730", PoseWithCovAndBingham, self.callback)
-        subs_topic = "/estimated_relative_pose/{}__to__{}".format(*target_imus)
+        subs_topic = "/estimated_relative_pose/imu{}__to__imu{}".format(*target_imus)
         rospy.Subscriber(subs_topic, PoseWithCovAndBingham, self.callback)
 
         rospy.logwarn("Subscribing {}".format(subs_topic))
