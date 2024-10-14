@@ -13,7 +13,7 @@ class DataContainerForFiltering:
             self.list.append(new_data)
             self.list.pop(0)
 
-    def __init__(self, size=7, poly_deg=5):
+    def __init__(self, size=13, poly_deg=7):
         self.size = size
         self.mid_idx = int((size - 1) / 2)
         
