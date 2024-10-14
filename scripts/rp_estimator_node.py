@@ -92,11 +92,16 @@ context.load_cert_chain(certfile=HOME + 'server.crt', keyfile=HOME + 'server.key
 
 async def server():
     ## load IMU data
-    try:
-        with open("imu_info.log", "r") as f:
-            imu_info = f.read()
-    except:
-        imu_info = json.dumps({"message_type": "imu_info", "selected_imus": ["", ""]})
+    imu_info = None
+    while not imu_info is None:
+        try:
+            with open("imu_info.log", "r") as f:
+                imu_info = f.read()
+        except:
+            # imu_info = json.dumps({"message_type": "imu_info", "selected_imus": ["", ""]})
+            imu_info = None
+            print("loading")
+            time.sleep(1)
     
     node = RelativePoseWebsocketNode(imu_info)
     async with websockets.serve(node.handler, "0.0.0.0", 8002, ssl=context):
