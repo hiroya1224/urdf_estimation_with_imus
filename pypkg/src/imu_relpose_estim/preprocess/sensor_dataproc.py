@@ -90,9 +90,11 @@ class ImuPreprocessor:
     def time_interpolation(cls, base_midtime, gapped_midtime, filter_coeffs, t_list):
         ## avoid extrapolation (extrapolation makes estimation results extremely unstable)
         if base_midtime < t_list[0]:
-            base_midtime = t_list[0]
+            # base_midtime = t_list[0]
+            return None
         if base_midtime > t_list[-1]:
-            base_midtime = t_list[-1]
+            # base_midtime = t_list[-1]
+            return None
 
         deltaT = gapped_midtime - base_midtime
 
