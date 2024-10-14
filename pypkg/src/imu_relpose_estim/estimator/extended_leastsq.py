@@ -108,6 +108,7 @@ class StateDataExtLeastSquare(StateDataGeneral):
 
 class BinghamHolder:
     def __init__(self):
+        self.CovInv = None
         self.empty()
 
     def empty(self):
