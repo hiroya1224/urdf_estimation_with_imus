@@ -93,7 +93,7 @@ context.load_cert_chain(certfile=HOME + 'server.crt', keyfile=HOME + 'server.key
 async def server():
     ## load IMU data
     imu_info = None
-    while not imu_info is None:
+    while imu_info is None:
         try:
             with open("imu_info.log", "r") as f:
                 imu_info = f.read()
