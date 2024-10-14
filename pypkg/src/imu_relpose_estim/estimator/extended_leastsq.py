@@ -159,9 +159,9 @@ class BinghamHolderGyro(BinghamHolder):
         deltaA_gyro = self.calc_deltaAmat(w_i, w_j, self.CovInv)
         self.update_Amat(self.Amat * forgetting_factor_rotation + deltaA_gyro)
 
-        rospy.logwarn(w_i)
-        rospy.logwarn(w_j)
-        rospy.logwarn("---")
+        # rospy.logwarn(w_i)
+        # rospy.logwarn(w_j)
+        # rospy.logwarn("---")
 
 
 class BinghamHolderForce(BinghamHolder):
