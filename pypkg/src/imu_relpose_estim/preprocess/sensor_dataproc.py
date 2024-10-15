@@ -89,8 +89,8 @@ class ImuPreprocessor:
 
         best_i = np.argmin(elapsed_times)
 
-        best_coeffs = d[best_i]["coeffs"]
-        best_tlist = d[best_i]["t_list"]
+        best_coeffs = container.coeffs_list_size[best_i]["coeffs"]
+        best_tlist = container.coeffs_list_size[best_i]["t_list"]
 
         return best_tlist, best_coeffs
             
