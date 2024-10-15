@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import numpy as np
+import copy
 
 class DataContainerForFiltering:
     class UpdatingList:
@@ -13,8 +14,10 @@ class DataContainerForFiltering:
             self.list.append(new_data)
             self.list.pop(0)
 
-    def __init__(self, size=13, poly_deg=7):
+    def __init__(self, size=7, poly_deg=5):
         self.size = size
+        self.coeffs_list_size = 20
+
         self.mid_idx = int((size - 1) / 2)
         
         self.poly_deg = poly_deg
@@ -25,7 +28,11 @@ class DataContainerForFiltering:
 
         ## poly_deg-th degree polynomial
         ## (deg + 1, len(omega) + len(acc))
-        self.coeffs = np.zeros((self.poly_deg + 1, 6))
+        # self.coeffs = np.zeros((self.poly_deg + 1, 6))
+        self.coeffs_list = self.UpdatingList([{
+            "coeffs": np.zeros((self.poly_deg + 1, 6)),
+            "t_list": copy.copy(self._t.list),
+        } for _ in range(self.coeffs_list_size)])
 
 
 class ImuPreprocessor:
@@ -62,8 +69,31 @@ class ImuPreprocessor:
                                   msg.angular_velocity.z]))
         
         ## update coeffs
-        container.coeffs = cls.calc_polynomial_coeffs(container)
-        
+        # container.coeffs = cls.calc_polynomial_coeffs(container)
+        container.coeffs_list.update({
+            "coeffs": cls.calc_polynomial_coeffs(container),
+            "t_list": copy.copy(container._t.list),
+        })
+    
+    @staticmethod
+    def find_best_match_coeffs(base_t0, container: DataContainerForFiltering):
+        elapsed_times = [np.inf for _ in range(container.coeffs_list_size)]
+
+        for i,d in enumerate(container.coeffs_list.list):
+            tlist = d["t_list"]
+            if tlist[0] > base_t0:
+                continue
+            if tlist[-1] < base_t0:
+                continue
+            elapsed_times[i] = (tlist[container.mid_idx] - base_t0) ** 2
+
+        best_i = np.argmin(elapsed_times)
+
+        best_coeffs = d[best_i]["coeffs"]
+        best_tlist = d[best_i]["t_list"]
+
+        return best_tlist, best_coeffs
+            
 
     @classmethod
     def calc_polynomial_coeffs(cls, container: DataContainerForFiltering):

@@ -44,11 +44,11 @@ class ImuPreprocessorROS:
 
         for frame_id, container in self.container.items():
 
-            t_list = container._t.list
-            if container.coeffs is None:
+            t_list, coeffs = ImuPreprocessor.find_best_match_coeffs(base_t0, container)
+            if coeffs is None:
                 return None
-            
-            time_interpolated = ImuPreprocessor.time_interpolation(base_t0, t_list[container.mid_idx], container.coeffs, t_list)
+
+            time_interpolated = ImuPreprocessor.time_interpolation(base_t0, t_list[container.mid_idx], coeffs, t_list)
 
             if time_interpolated is None:
                 return None
