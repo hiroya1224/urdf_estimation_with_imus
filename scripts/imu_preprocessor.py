@@ -38,14 +38,28 @@ class ImuPreprocessorROS:
     def create_interpolated_msg(self, base_frame_id):
 
         base_container = self.container[base_frame_id]
-        base_t0 = base_container._t.list[base_container.mid_idx]
+        # base_t0 = base_container._t.list[base_container.mid_idx]
+        base_list = base_container.coeffs_list
 
         interpolated_result = []
 
-        for frame_id, container in self.container.items():
+        base_t0 = None
+        coeffs = None
+        t_list = None
 
-            t_list, coeffs = ImuPreprocessor.find_best_match_coeffs(base_t0, container)
-            if coeffs is None:
+        for frame_id, container in self.container.items():
+            for dct in base_list:
+                base_tlist = dct["t_list"]
+                base_t0 = base_tlist[base_container.mid_idx]
+
+                t_list, coeffs = ImuPreprocessor.find_best_match_coeffs(base_t0, container)
+
+                if coeffs is None:
+                    continue
+                else:
+                    break
+
+            if base_t0 is None:
                 return None
 
             time_interpolated = ImuPreprocessor.time_interpolation(base_t0, t_list[container.mid_idx], coeffs, t_list)

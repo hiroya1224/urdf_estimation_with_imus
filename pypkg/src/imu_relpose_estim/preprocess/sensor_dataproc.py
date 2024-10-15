@@ -89,8 +89,12 @@ class ImuPreprocessor:
 
         best_i = np.argmin(elapsed_times)
 
-        best_coeffs = container.coeffs_list.list[best_i]["coeffs"]
-        best_tlist = container.coeffs_list.list[best_i]["t_list"]
+        if elapsed_times[best_i] == np.inf:
+            return tlist, None
+
+        best_coeff_dict = container.coeffs_list.list[best_i]
+        best_coeffs = best_coeff_dict["coeffs"]
+        best_tlist = best_coeff_dict["t_list"]
 
         return best_tlist, best_coeffs
             
@@ -119,6 +123,9 @@ class ImuPreprocessor:
     @classmethod
     def time_interpolation(cls, base_midtime, gapped_midtime, filter_coeffs, t_list):
         ## avoid extrapolation (extrapolation makes estimation results extremely unstable)
+        if filter_coeffs is None:
+            return None
+        
         if base_midtime < t_list[0]:
             # base_midtime = t_list[0]
             return None
