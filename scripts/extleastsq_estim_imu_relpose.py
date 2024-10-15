@@ -206,7 +206,7 @@ if __name__ == '__main__':
     symbolic_robot_description = rospy.get_param("/symbolic_robot_description") if not args.nosymburdf else None
 
     pf = EstimateImuRelativePoseExtendedLeastSquareROS(args.this, args.child, symbolic_robot_description,
-                                                       use_child_gyro=False)
+                                                       use_child_gyro=True)
     imu_sub = rospy.Subscriber("/imu_filtered/calib", ImuDataFilteredList, pf.ros_callback, queue_size=1)
     reset_estimation = rospy.Subscriber("/reset_estimation", Empty, pf.reset_estimation_callback, queue_size=1)
     

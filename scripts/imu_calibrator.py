@@ -136,8 +136,8 @@ class ImuCalibratorROS:
                 container.calib_param["acc_scaler"] = R_a
                 container.calib_param["acc_bias"] = b_a
 
-                import scipy.io
-                scipy.io.savemat("/home/docker/app/acc_list.mat", {"acc_dataset": acc_dataset, "R_a": R_a, "b_a": b_a})
+                # import scipy.io
+                # scipy.io.savemat("/home/docker/app/acc_list.mat", {"acc_dataset": acc_dataset, "R_a": R_a, "b_a": b_a})
             
             return 2
         

@@ -39,7 +39,7 @@ class ImuPreprocessorROS:
 
         base_container = self.container[base_frame_id]
         # base_t0 = base_container._t.list[base_container.mid_idx]
-        base_list = base_container.coeffs_list
+        base_list = base_container.coeffs_list.list
 
         interpolated_result = []
 
