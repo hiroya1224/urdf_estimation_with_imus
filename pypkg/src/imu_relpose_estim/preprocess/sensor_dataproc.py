@@ -16,7 +16,7 @@ class DataContainerForFiltering:
 
     def __init__(self, size=7, poly_deg=5):
         self.size = size
-        self.coeffs_list_size = 20
+        self.coeffs_list_size = 1
 
         self.mid_idx = int((size - 1) / 2)
         
@@ -67,6 +67,11 @@ class ImuPreprocessor:
         container.omg.update(np.array([msg.angular_velocity.x,
                                   msg.angular_velocity.y,
                                   msg.angular_velocity.z]))
+        
+        sorted_indices = sorted(range(len(container._t.list)), key=lambda i: container._t.list[i])
+        container._t.list = [container._t.list[i] for i in sorted_indices]
+        container.acc.list = [container.acc.list[i] for i in sorted_indices]
+        container.omg.list = [container.omg.list[i] for i in sorted_indices]
         
         ## update coeffs
         # container.coeffs = cls.calc_polynomial_coeffs(container)
