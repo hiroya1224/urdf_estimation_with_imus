@@ -148,8 +148,8 @@ class ImuPreprocessor:
             return None
 
         deltaT = -(gapped_midtime - base_midtime)
-        import rospy
-        rospy.logwarn(f"deltaT = {deltaT}")
+        # import rospy
+        # rospy.logwarn(f"deltaT = {deltaT}")
 
         gyroacc_at_baset0 = cls.interpolated_value(
             filter_coeffs,

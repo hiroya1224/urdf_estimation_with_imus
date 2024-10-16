@@ -80,7 +80,7 @@ class ImuPreprocessorROS:
             #     else:
             #         break
             
-            rospy.logerr("=========")
+            # rospy.logerr("=========")
             if base_t0 is None:
                 return None
 
