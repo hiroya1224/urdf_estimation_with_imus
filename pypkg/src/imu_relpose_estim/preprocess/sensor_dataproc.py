@@ -16,7 +16,7 @@ class DataContainerForFiltering:
 
     def __init__(self, size=7, poly_deg=5):
         self.size = size
-        self.coeffs_list_size = 1
+        self.coeffs_list_size = 10
 
         self.mid_idx = int((size - 1) / 2)
         
@@ -94,12 +94,21 @@ class ImuPreprocessor:
 
         best_i = np.argmin(elapsed_times)
 
+        # import rospy
+        # rospy.logwarn(f"elapsed_times = {elapsed_times}")
+        # rospy.logwarn("base_t0 = {}".format(base_t0))
+
         if elapsed_times[best_i] == np.inf:
             return tlist, None
 
         best_coeff_dict = container.coeffs_list.list[best_i]
         best_coeffs = best_coeff_dict["coeffs"]
         best_tlist = best_coeff_dict["t_list"]
+
+        # rospy.logerr("---")
+        # # rospy.logwarn("best_coeffs = {}".format(best_coeffs))
+        # rospy.logwarn("best_tlist = {}".format(best_tlist))
+        # rospy.logerr("---")
 
         return best_tlist, best_coeffs
             
@@ -138,7 +147,9 @@ class ImuPreprocessor:
             # base_midtime = t_list[-1]
             return None
 
-        deltaT = gapped_midtime - base_midtime
+        deltaT = (gapped_midtime - base_midtime)
+        import rospy
+        rospy.logwarn(f"deltaT = {deltaT}")
 
         gyroacc_at_baset0 = cls.interpolated_value(
             filter_coeffs,

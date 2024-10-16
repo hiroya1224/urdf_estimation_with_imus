@@ -41,24 +41,46 @@ class ImuPreprocessorROS:
         # base_t0 = base_container._t.list[base_container.mid_idx]
         base_list = base_container.coeffs_list.list
 
+        max_candi = []
+        min_candi = []
+        for frame_id, container in self.container.items():
+            max_candi.append(max(container._t.list))
+            min_candi.append(min(container._t.list))
+        
+        range_min = max(min_candi)
+        range_max = min(max_candi)
+        if range_max < range_min:
+            return None
+        
+        base_t0 = (range_max + range_min) / 2.
+
         interpolated_result = []
 
-        base_t0 = None
-        coeffs = None
-        t_list = None
-
         for frame_id, container in self.container.items():
-            for dct in base_list:
-                base_tlist = dct["t_list"]
-                base_t0 = base_tlist[base_container.mid_idx]
+            # base_t0 = None
+            # coeffs = None
+            # t_list = None
+            t_list, coeffs = ImuPreprocessor.find_best_match_coeffs(base_t0, container)
 
-                t_list, coeffs = ImuPreprocessor.find_best_match_coeffs(base_t0, container)
+            # for i,dct in enumerate(base_list[::-1]):
+            #     base_tlist = dct["t_list"]
+            #     base_t0 = base_tlist[base_container.mid_idx]
+            #     rospy.logerr("=== {} ===".format(i))
+            #     rospy.logwarn("base_tlist = {}".format(base_tlist))
 
-                if coeffs is None:
-                    continue
-                else:
-                    break
+            #     t_list, coeffs = ImuPreprocessor.find_best_match_coeffs(base_t0, container)
 
+            #     rospy.logwarn("t_list: {}".format(t_list))
+            #     # rospy.logwarn("coeffs: {}".format(coeffs))
+            #     rospy.logerr("=========")
+
+
+            #     if coeffs is None:
+            #         continue
+            #     else:
+            #         break
+            
+            rospy.logerr("=========")
             if base_t0 is None:
                 return None
 
