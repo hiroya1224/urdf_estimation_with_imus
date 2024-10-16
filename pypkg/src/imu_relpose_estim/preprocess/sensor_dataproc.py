@@ -147,7 +147,7 @@ class ImuPreprocessor:
             # base_midtime = t_list[-1]
             return None
 
-        deltaT = (gapped_midtime - base_midtime)
+        deltaT = -(gapped_midtime - base_midtime)
         import rospy
         rospy.logwarn(f"deltaT = {deltaT}")
 
